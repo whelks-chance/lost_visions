@@ -4,14 +4,13 @@ from BeautifulSoup import BeautifulSoup
 __author__ = 'ubuntu'
 
 
-def iterate_elements(elm, depth, route, outputfile=None):
-
-    parent = route
+def iterate_elements(elm, depth, parent, parent_id, max_id, outputfile=None):
+    depth += 1
 
     for li in elm.findAll('li', recursive=False):
-
+        max_id += 1
         # print li.contents[2].strip()
-        route = (parent + ">" + li.contents[2].strip())
+        route = (str(parent_id) + ">" + str(max_id) + '>' + li.contents[2].strip())
 
         print route
 
@@ -20,13 +19,11 @@ def iterate_elements(elm, depth, route, outputfile=None):
 
         for leaf in li.findAll('ul', {'class': 'non_leaf show'}, recursive=False):
 
-            depth += 1
+            max_id = iterate_elements(leaf, depth,
+                                      parent=parent_id, parent_id=max_id,
+                                      max_id=max_id, outputfile=outputfile)
 
-            if outputfile:
-                outputfile.write('\n')
-
-            iterate_elements(leaf, depth, route, outputfile)
-
+    return max_id
 
 def download_dmvi_categories(outputfile=None):
 
@@ -38,7 +35,7 @@ def download_dmvi_categories(outputfile=None):
         root_elm = BeautifulSoup(data)
 
         for elm in root_elm.findAll('ul', {'id': 'vocab'}):
-            iterate_elements(elm, 0, "category", outputfile)
+            iterate_elements(elm, 0, "category", parent_id=-1, max_id=-1, outputfile=outputfile)
 
 
 outputfile = open('./categories.txt', 'a')
