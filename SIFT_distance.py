@@ -21,8 +21,10 @@ files = [
 
 
 class ImageDescriptor():
-    def __init__(self, img_path):
+    def __init__(self, img_idx, img_path):
+        self.img_idx = img_idx
         self.img_path = img_path
+        self.weights = {}
 
     def get_sift(self, detector=None, create_file=True):
         if detector is None:
@@ -43,6 +45,53 @@ class ImageDescriptor():
                     cPickle.dump(key_desc_temp, f, protocol=cPickle.HIGHEST_PROTOCOL)
         return keypoints, descriptors
 
+    def add_distance(self, image_ref, weighting):
+        self.weights[image_ref] = weighting
+
+    def get_sorted_weights(self):
+        return sorted(self.weights, key=self.weights.get, reverse=True)
+
+    def get_image_signature(self):
+        sig = ''
+        for img_idx in list(self.get_sorted_weights()):
+            sig += str(img_idx)
+        return sig
+
+    def get_weighted_signature(self):
+        sig = ''
+        weighted_list = self.get_sorted_weights()
+
+        for img_idx in weighted_list:
+            sig += str(str(img_idx) * self.weights[img_idx])
+        return sig
+
+
+class ImageDescriptorManager():
+    def __init__(self, match_threshold=1.5, detector=None):
+        self.detector = detector
+        self.match_threshold = match_threshold
+        self.image_descriptors = {}
+
+    def add_descriptor(self, descriptor):
+        print '\nAdding descriptor ' + str(descriptor.img_idx) + ' ' + descriptor.img_path
+
+        for img_idx in self.image_descriptors:
+            print img_idx
+            img_desc = self.image_descriptors[img_idx]
+
+            sift_key_a, sift_desc_a = descriptor.get_sift(detector=self.detector)
+            sift_key_b, sift_desc_b = img_desc.get_sift(detector=self.detector)
+            weight = find_matches(
+                '',
+                sift_desc_a,
+                sift_desc_b,
+                self.match_threshold
+            )
+            descriptor.add_distance(img_desc.img_idx, weight)
+            img_desc.add_distance(descriptor.img_idx, weight)
+
+        self.image_descriptors[descriptor.img_idx] = descriptor
+
 
 def iterall(files_list, match_thresh=1.5):
 
@@ -51,6 +100,8 @@ def iterall(files_list, match_thresh=1.5):
     descriptor_distances = {}
     desc_strings = {}
     weighted_strings = {}
+
+    desc_man = ImageDescriptorManager(match_threshold=match_thresh, detector=detector)
 
     for img_idx in files_list:
         img_path = files_list[img_idx]
@@ -73,26 +124,33 @@ def iterall(files_list, match_thresh=1.5):
 
                 # all_descriptors[idx] = descriptors
 
-    thread_pool = []
+    for filea in files_list:
+        img_desc = ImageDescriptor(filea, files_list[filea])
+        desc_man.add_descriptor(img_desc)
+
+    print '\n\n*****\n'
+    for man_img_idx in desc_man.image_descriptors:
+        man_img = desc_man.image_descriptors[man_img_idx]
+        print '\n***\n'
+        print man_img.get_image_signature()
+        print man_img.get_weighted_signature()
+        print '\n'
+
+    # thread_pool = []
 
     for file_a in files_list:
         print '\nComparing file ' + str(file_a) + ' to : '
 
         descriptor_orders = {}
         weighted_orders = {}
+        with open(files_list[file_a] + '.sift', 'rb') as fa:
+            keypoints_a, descriptors_a = unpickle_keypoints( cPickle.load(fa) )
+
         for file_b in files_list:
             print file_b,
             if file_a != file_b:
-                with open(files_list[file_a] + '.sift', 'rb') as fa:
-                    keypoints_a, descriptors_a = unpickle_keypoints( cPickle.load(fa) )
                 with open(files_list[file_b] + '.sift', 'rb') as fb:
                     keypoints_b, descriptors_b = unpickle_keypoints( cPickle.load(fb) )
-
-                # t = threading.Thread(target=find_matches, args=(str(file_a) + ',' + str(file_b),
-                #                                                 descriptors_a,
-                #                                                 descriptors_b,
-                #                                                 match_thresh))
-                # thread_pool.append(t)
 
                 matches_size = find_matches(str(file_a) + ',' + str(file_b),
                                             descriptors_a,
@@ -101,6 +159,7 @@ def iterall(files_list, match_thresh=1.5):
                 descriptor_orders[str(file_b)] = matches_size
 
                 weighted_orders[str(file_b)] = (str(file_b) + '=' + str(matches_size)) + ':'
+                # weighted_orders[str(file_b)] = (str(file_b) * matches_size)
 
                 descriptor_distances[str(file_a) + ':' + str(file_b)] = matches_size
 
@@ -119,37 +178,6 @@ def iterall(files_list, match_thresh=1.5):
               + desc_strings[file_a]
 
     print '\n****\nArray of distances between images : \n' + str(descriptor_distances)
-
-    # for descriptor_a in all_descriptors:
-    #     # print 'descriptors for ' + str(descriptor_a) + str(files[descriptor_a])
-    #     # print len(all_descriptors[descriptor_a])
-    #
-    #     descriptor_orders = {}
-    #     for descriptor_b in all_descriptors:
-    #
-    #         if descriptor_a != descriptor_b:
-    #
-    #             # print 'comparing to ' + str(descriptor_b) + str(files[descriptor_b])
-    #             # print len(all_descriptors[descriptor_b])
-    #
-    #             matches_size = find_matches(str(descriptor_a) + ',' + str(descriptor_b),
-    #                                         all_descriptors[descriptor_a],
-    #                                         all_descriptors[descriptor_b],
-    #                                         match_thresh)
-    #             descriptor_orders[str(descriptor_b)] = matches_size
-    #             descriptor_distances[str(descriptor_a) + ':' + str(descriptor_b)] = matches_size
-    #
-    #             # for w in sorted(descriptor_orders, key=descriptor_orders.get, reverse=True):
-    #             #     print w, descriptor_orders[w]
-    #
-    #     print '\nImage ' + files_list[descriptor_a] + ' is most similar to ' \
-    #           + files_list[int(list(sorted(descriptor_orders, key=descriptor_orders.get, reverse=True))[0])] + '\n'
-    #
-    #     desc_arr = list(sorted(descriptor_orders, key=descriptor_orders.get, reverse=True))
-    #
-    #     desc_strings[descriptor_a] = ' '.join(desc_arr)
-    #
-    #     print descriptor_distances
 
     for ws in weighted_strings:
         print str(ws) + ' : ' + weighted_strings[ws]
