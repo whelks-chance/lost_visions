@@ -3,8 +3,9 @@ import cPickle
 import threading
 import cv2
 import numpy as np
-from datetime import time, datetime
+# from datetime import time, datetime
 import nltk
+from TimeKeeper import TimeKeeper
 
 __author__ = 'ubuntu'
 
@@ -112,8 +113,8 @@ class ImageDescriptorManager():
 
 def iterall(files_list, match_thresh=1.5):
 
-    time_a = datetime.now()
-    print datetime.now().isoformat()
+    timekeeper = TimeKeeper()
+    timekeeper.time_now('start', True)
 
     detector = cv2.SIFT()
     all_descriptors = {}
@@ -123,19 +124,14 @@ def iterall(files_list, match_thresh=1.5):
 
     desc_man = ImageDescriptorManager(match_threshold=match_thresh, detector=detector)
 
-    time_b = datetime.now()
-    print datetime.now().isoformat()
-    time_delta = time_b - time_a
-    print time_delta.total_seconds()
-
     wrote_sift = 0
     for img_idx in files_list:
         img_path = files_list[img_idx]
-        print str(img_idx) + ' : ' + img_path
+        # print str(img_idx) + ' : ' + img_path
 
         if os.path.isfile(img_path + '.sift'):
-            # print 'found sift file : ' + img_path + '.sift'
-            print '.',
+            print 'Found sift file : ' + img_path + '.sift'
+            # print '.',
             # with open(img_path + '.sift', 'rb') as f:
             #     keypoints, descriptors = unpickle_keypoints( cPickle.load(f) )
         else:
@@ -152,36 +148,28 @@ def iterall(files_list, match_thresh=1.5):
             del descriptors
             wrote_sift += 1
                 # all_descriptors[idx] = descriptors
-    print 'had to create ' + str(wrote_sift) + ' .sift files.'
+    print 'Had to create ' + str(wrote_sift) + ' .sift files.'
 
-    time_c = datetime.now()
-    print time_c.isoformat()
-    time_delta = time_c - time_b
-    print time_delta.total_seconds()
+    timekeeper.time_now('After check SIFT')
 
     for filea in files_list:
         img_desc = ImageDescriptor(filea, files_list[filea])
         desc_man.add_descriptor(img_desc)
 
-    time_d = datetime.now()
-    print time_d.isoformat()
-    time_delta = time_d - time_c
-    print '*************************************************'
-    print time_delta.total_seconds()
-    print 'Avg ' + str(float(time_delta.total_seconds()) / len(files_list)) + ' secs per img load'
+    time_delta = timekeeper.time_now('After create ImageDescriptors', True)
+    print '\nAvg ' + str(float(time_delta) / len(files_list)) + ' secs per img load'
 
     for man_img_idx in desc_man.image_descriptors:
         man_img = desc_man.image_descriptors[man_img_idx]
         print '***\n'
         print 'img sig : ' + man_img.get_image_signature()
         print 'Image ' + man_img.img_path + ' is most similar to ' + files_list[list(man_img.get_sorted_weights())[0]]
-        # print man_img.get_weighted_signature()
+        print man_img.get_weighted_signature()
         print '\n'
 
-    time_e = datetime.now()
-    print time_e.isoformat()
-    time_delta = time_e - time_d
-    print time_delta.total_seconds()
+    print timekeeper.time_now('After similarities', True)
+
+
 
     # for file_a in files_list:
     #     print '\nComparing file ' + str(file_a) + ' to : '
@@ -223,11 +211,8 @@ def iterall(files_list, match_thresh=1.5):
 
     # print '\n****\nArray of distances between images : \n' + str(descriptor_distances)
 
-    time_f = datetime.now()
-    print time_f.isoformat()
-    time_delta = time_f - time_e
-    print '*********************************************'
-    print time_delta.total_seconds()
+
+
 
     # for ws in weighted_strings:
     #     print str(ws) + ' : ' + weighted_strings[ws]
@@ -264,15 +249,13 @@ def iterall(files_list, match_thresh=1.5):
                 print files_list[st]
                 print '\n'
 
-    time_g = datetime.now()
-    print time_g.isoformat()
-    time_delta = time_g - time_f
-    print time_delta.total_seconds()
+    print timekeeper.time_now('After description strings', True)
 
     new_desc = ImageDescriptor(len(files_list), './portrait/11040852736_83cc5c2155_z.jpg')
     desc_man.quick_init(new_desc)
     print '\n' + new_desc.get_image_signature()
     print new_desc.get_weighted_signature()
+    timekeeper.time_now('Finish', True)
 
 def pickle_keypoints(keypoints, descriptors):
     i = 0
@@ -372,6 +355,6 @@ def find_files(folders):
     return files_dict
 
 
-to_match = find_files(['./maps', './animals', './portrait_large'])
+to_match = find_files(['./map', './animals', './portrait'])
 
 iterall(to_match, 1.5)
