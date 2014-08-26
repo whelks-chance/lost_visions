@@ -170,8 +170,16 @@ def iterall(files_list, match_thresh=1.5):
         man_img = desc_man.image_descriptors[man_img_idx]
         print '***\n'
         print 'img sig : ' + man_img.get_image_signature()
-        print 'Image ' + man_img.img_path + ' is most similar to ' + files_list[list(man_img.get_sorted_weights())[0]]
         print man_img.get_weighted_signature()
+        print 'Image ' + man_img.img_path + ' is most similar to ' + files_list[list(man_img.get_sorted_weights())[0]]
+        for i in files_list:
+            if files_list[i] == man_img.img_path:
+                print str(man_img.img_path) + ' : ' + str(i)
+
+        for j in files_list:
+            if files_list[j] == files_list[list(man_img.get_sorted_weights())[0]]:
+                print 'Similar to image : ' + str(j)
+
         print '\n'
 
     print timekeeper.time_now('After similarities', True)
@@ -357,14 +365,16 @@ def walk_folder(folder, all_files):
 def find_files(folders):
     all_files = []
     for folder in folders:
-        # # print folder
-        # for a_file in os.listdir(folder):
-        #     # print a_file
-        #     fileName, fileExtension = os.path.splitext(a_file)
-        #
-        #     if os.path.isfile(os.path.join(folder, a_file)) and '.sift' not in fileExtension:
-        #         all_files.append(os.path.join(folder, a_file))
+        # print folder
+        count = 0
+        for a_file in os.listdir(folder):
+            if count < 10:
+                count += 1
+                # print a_file
+                fileName, fileExtension = os.path.splitext(a_file)
 
+                if os.path.isfile(os.path.join(folder, a_file)) and '.sift' not in fileExtension:
+                    all_files.append(os.path.join(folder, a_file))
         all_files = walk_folder(folder, all_files)
 
     print 'Found ' + str(len(all_files)) + ' files'
