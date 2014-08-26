@@ -266,10 +266,10 @@ def iterall(files_list, match_thresh=1.5):
 
     print timekeeper.time_now('After description strings', True)
 
-    new_desc = ImageDescriptor(len(files_list), './portrait/11040852736_83cc5c2155_z.jpg')
-    desc_man.quick_init(new_desc)
-    print '\n' + new_desc.get_image_signature()
-    print new_desc.get_weighted_signature()
+    # new_desc = ImageDescriptor(len(files_list), './portrait/11040852736_83cc5c2155_z.jpg')
+    # desc_man.quick_init(new_desc)
+    # print '\n' + new_desc.get_image_signature()
+    # print new_desc.get_weighted_signature()
     timekeeper.time_now('Finish', True)
 
 def pickle_keypoints(keypoints, descriptors):
