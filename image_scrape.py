@@ -84,6 +84,7 @@ def getImageTags(url):
 
 
 def getImagePagesFromBasePage(url, imagecounter=0):
+    print url
     resp = urllib2.urlopen(url)
     if resp.code == 200:
         pageUrls = dict()
@@ -95,7 +96,12 @@ def getImagePagesFromBasePage(url, imagecounter=0):
             for photoclick in elm.findAll('a'):
                 pageUrls[imagecounter] = 'http://www.flickr.com' + photoclick['href']
                 imagecounter += 1
-            # print pageUrls
+
+        with open('./urls.txt', 'a') as url_file:
+            for u in pageUrls:
+                url_file.write(pageUrls[u] + '\n')
+        url_file.close()
+
         return pageUrls
     else:
         return None
@@ -143,7 +149,7 @@ def getTagsFromBasePage(baseurl=None, basepagenumber=None,
             pageImageTags = dict()
 
             for urlCounter in pageUrls:
-                print 'URL: ' + pageUrls[urlCounter]
+                print '\nURL: ' + pageUrls[urlCounter]
                 print 'Image number : ' + str(imagecounter)
                 if output_file is not None:
                     output_file.write('\n\n' + pageUrls[urlCounter] + '\n')

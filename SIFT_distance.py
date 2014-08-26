@@ -33,18 +33,25 @@ class ImageDescriptor():
             detector = cv2.SIFT()
 
         if os.path.isfile(self.img_path + '.sift'):
-            with open(self.img_path + '.sift', 'rb') as f:
-                keypoints, descriptors = unpickle_keypoints( cPickle.load(f) )
+            try:
+                with open(self.img_path + '.sift', 'rb') as f:
+                    keypoints, descriptors = unpickle_keypoints( cPickle.load(f) )
+            except cPickle.UnpicklingError as ue:
+                print 'Unpickling error, recreating sift pickle : ' + str(ue)
+                keypoints, descriptors = self.create_sift(detector, create_file)
         else:
-            img = cv2.imread(self.img_path)
-            img_gray = cv2.cvtColor( img, cv2.COLOR_BGR2GRAY )
-            keypoints, descriptors = detector.detectAndCompute(img_gray, None)
+            keypoints, descriptors = self.create_sift(detector, create_file)
 
-            key_desc_temp = pickle_keypoints(keypoints, descriptors)
+        return keypoints, descriptors
 
-            if create_file:
-                with open(self.img_path + '.sift', 'wb') as f:
-                    cPickle.dump(key_desc_temp, f, protocol=cPickle.HIGHEST_PROTOCOL)
+    def create_sift(self, detector, create_file):
+        img = cv2.imread(self.img_path)
+        img_gray = cv2.cvtColor( img, cv2.COLOR_BGR2GRAY )
+        keypoints, descriptors = detector.detectAndCompute(img_gray, None)
+        key_desc_temp = pickle_keypoints(keypoints, descriptors)
+        if create_file:
+            with open(self.img_path + '.sift', 'wb') as f:
+                cPickle.dump(key_desc_temp, f, protocol=cPickle.HIGHEST_PROTOCOL)
         return keypoints, descriptors
 
     def add_distance(self, image_ref, weighting):
@@ -334,20 +341,35 @@ def find_matches(desc, template_descriptors, current_img_descriptors, match_thre
 
     return len(matches)
 
+def walk_folder(folder, all_files):
+    for a_file in os.listdir(folder):
+        # print a_file
+        fileName, fileExtension = os.path.splitext(a_file)
+
+        if os.path.isfile(os.path.join(folder, a_file)) and '.sift' not in fileExtension:
+            all_files.append(os.path.join(folder, a_file))
+
+        if os.path.isdir(os.path.join(folder, a_file)):
+            all_files = walk_folder(os.path.join(folder, a_file), all_files)
+    return all_files
+
 
 def find_files(folders):
     all_files = []
     for folder in folders:
-        # print folder
-        for a_file in os.listdir(folder):
-            # print a_file
-            fileName, fileExtension = os.path.splitext(a_file)
+        # # print folder
+        # for a_file in os.listdir(folder):
+        #     # print a_file
+        #     fileName, fileExtension = os.path.splitext(a_file)
+        #
+        #     if os.path.isfile(os.path.join(folder, a_file)) and '.sift' not in fileExtension:
+        #         all_files.append(os.path.join(folder, a_file))
 
-            if os.path.isfile(os.path.join(folder, a_file)) and '.sift' not in fileExtension:
-                all_files.append(os.path.join(folder, a_file))
+        all_files = walk_folder(folder, all_files)
 
+    print 'Found ' + str(len(all_files)) + ' files'
     files_dict = {}
-    for f in all_files[:10]:
+    for f in all_files[:100]:
         files_dict[int(len(files_dict))] = f
 
     print str(files_dict) + '\n\n****\n'
@@ -355,6 +377,6 @@ def find_files(folders):
     return files_dict
 
 
-to_match = find_files(['./map', './animals', './portrait'])
+to_match = find_files(['./learn-all'])
 
 iterall(to_match, 1.5)
