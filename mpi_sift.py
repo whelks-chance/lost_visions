@@ -1,6 +1,7 @@
 from random import randint
 from time import sleep
 from SIFT_distance import touch_sift
+from TimeKeeper import TimeKeeper
 from file_utils import find_files
 
 __author__ = 'lostvisions'
@@ -38,12 +39,17 @@ tags = {
 status = MPI.Status()   # get MPI status object
 try:
     if rank == 0:
+        timekeeper = TimeKeeper()
+        timekeeper.time_now('start', True)
+
         # Master process executes code below
         # tasks = range(2*size)
 
         # tasks = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't']
 
-        tasks = find_files(['./image_link/bl_images'], max_files=500)
+        tasks = find_files(['./image_link/bl_images'], max_files=10000)
+
+        timekeeper.time_now('Found files', True)
 
         task_index = 0
         num_workers = size - 1
@@ -74,6 +80,10 @@ try:
             elif tag == tags['EXIT']:
                 # print("Worker {} exited.".format(source))
                 closed_workers += 1
+                timekeeper.time_now('worker {} exit'.format(source), True)
+
+        timekeeper.time_now('master finished', True)
+
         s_print("Master finishing")
         print "Wrote " + str(number_sifts_written) + ' new SIFT files.'
         print "Completed " + str(len(tasks)) + ' Tasks.'
