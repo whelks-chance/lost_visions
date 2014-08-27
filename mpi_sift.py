@@ -1,5 +1,7 @@
 from random import randint
 from time import sleep
+from SIFT_distance import touch_sift
+from file_utils import find_files
 
 __author__ = 'lostvisions'
 
@@ -10,6 +12,7 @@ __author__ = 'lostvisions'
 
 from mpi4py import MPI
 import sys
+
 
 
 def s_print(t):
@@ -38,12 +41,17 @@ try:
         # Master process executes code below
         # tasks = range(2*size)
 
-        tasks = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't']
+        # tasks = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't']
+
+        tasks = find_files(['./image_link/bl_images'], max_files=1000)
 
         task_index = 0
         num_workers = size - 1
         closed_workers = 0
         s_print("Master starting with {} workers".format(num_workers))
+
+        number_sifts_written = 0
+
         while closed_workers < num_workers:
             data = comm.recv(source=MPI.ANY_SOURCE, tag=MPI.ANY_TAG, status=status)
             source = status.Get_source()
@@ -61,10 +69,14 @@ try:
             elif tag == tags['DONE']:
                 results = data
                 print("Got data from worker {} : {}".format(source, results))
+                if results['had_to_create']:
+                    number_sifts_written += 1
             elif tag == tags['EXIT']:
                 # print("Worker {} exited.".format(source))
                 closed_workers += 1
         s_print("Master finishing")
+        print "Wrote " + str(number_sifts_written) + ' new SIFT files.'
+        print "Completed " + str(len(tasks)) + ' Tasks.'
     else:
         # Worker processes execute code below
         s_print("I am a worker with rank {} on {}.".format(rank, name))
@@ -77,13 +89,19 @@ try:
                 # sleep(randint(0, 5))
                 # Do the work here
                 # result = task**2
-                a = 0
-                b = 0
-                c = 0
-                for a in range(1000):
-                    for b in range(1000):
-                        c += a + b
-                result = task + "-ok-" + str(c)
+                # a = 0
+                # b = 0
+                # c = 0
+                # for a in range(1000):
+                #     for b in range(1000):
+                #         c += a + b
+                # result = task + "-ok-" + str(c)
+
+                had_to_create = touch_sift(task)
+                result = {
+                    'img_path': task,
+                    'had_to_create': had_to_create
+                }
                 comm.send(result, dest=0, tag=tags['DONE'])
             elif tag == tags['EXIT']:
                 # print('leaving worker loop')
