@@ -43,7 +43,7 @@ try:
 
         # tasks = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't']
 
-        tasks = find_files(['./image_link/bl_images'], max_files=1000)
+        tasks = find_files(['./image_link/bl_images'], max_files=500)
 
         task_index = 0
         num_workers = size - 1
