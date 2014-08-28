@@ -30,98 +30,104 @@ name = MPI.Get_processor_name()
 print('Helloworld! I am process %d of %d on %s.\n' % (rank, size, name))
 
 tags = {
-    'READY': 0,
-    'DONE': 1,
-    'EXIT': 2,
-    'START': 3
+    'READY': 1,
+    'DONE': 2,
+    'EXIT': 3,
+    'START': 4
 }
 
 status = MPI.Status()   # get MPI status object
-try:
-    if rank == 0:
-        timekeeper = TimeKeeper()
-        timekeeper.time_now('start', True)
 
-        # Master process executes code below
-        # tasks = range(2*size)
+if rank == 0:
+    print tags['READY']
+    print tags['DONE']
+    print tags['EXIT']
+    print tags['DONE']
 
-        # tasks = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't']
+    timekeeper = TimeKeeper()
+    timekeeper.time_now('start', True)
 
-        tasks = find_files(['./image_link/bl_images'], max_files=10000)
+    # Master process executes code below
+    # tasks = range(2*size)
 
-        timekeeper.time_now('Found files', True)
+    # tasks = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't']
 
-        task_index = 0
-        num_workers = size - 1
-        closed_workers = 0
-        s_print("Master starting with {} workers".format(num_workers))
+    tasks = find_files(['./image_link/bl_images'], max_files=1000, filter_sift=True)
 
-        number_sifts_written = 0
+    print 'found ' + str(len(tasks)) + ' files'
 
-        while closed_workers < num_workers:
-            data = comm.recv(source=MPI.ANY_SOURCE, tag=MPI.ANY_TAG, status=status)
-            source = status.Get_source()
-            tag = status.Get_tag()
-            if tag == tags['READY']:
-                s_print ("Worker {} requesting task.".format(source))
-                # Worker is ready, so send it a task
-                if task_index < len(tasks):
-                    comm.send(tasks[task_index], dest=source, tag=tags['START'])
-                    print("Sending task {} to worker {}".format(task_index, source))
-                    task_index += 1
-                else:
-                    # s_print("\nAll tasks finished\n")
-                    comm.send(None, dest=source, tag=tags['EXIT'])
-            elif tag == tags['DONE']:
-                results = data
-                print("Got data from worker {} : {}".format(source, results))
-                if results['had_to_create']:
-                    number_sifts_written += 1
-            elif tag == tags['EXIT']:
-                # print("Worker {} exited.".format(source))
-                closed_workers += 1
-                timekeeper.time_now('worker {} exit'.format(source), True)
+    timekeeper.time_now('Found files', True)
 
-        timekeeper.time_now('master finished', True)
+    task_index = 0
+    num_workers = size - 1
+    closed_workers = 0
+    s_print("Master starting with {} workers".format(num_workers))
 
-        s_print("Master finishing")
-        print "Wrote " + str(number_sifts_written) + ' new SIFT files.'
-        print "Completed " + str(len(tasks)) + ' Tasks.'
-    else:
-        # Worker processes execute code below
-        s_print("I am a worker with rank {} on {}.".format(rank, name))
-        while True:
-            comm.send(None, dest=0, tag=tags['READY'])
-            task = comm.recv(source=0, tag=MPI.ANY_SOURCE, status=status)
-            tag = status.Get_tag()
+    number_sifts_written = 0
 
-            if tag == tags['START']:
-                # sleep(randint(0, 5))
-                # Do the work here
-                # result = task**2
-                # a = 0
-                # b = 0
-                # c = 0
-                # for a in range(1000):
-                #     for b in range(1000):
-                #         c += a + b
-                # result = task + "-ok-" + str(c)
+    while closed_workers < num_workers:
+        data = comm.recv(source=MPI.ANY_SOURCE, tag=MPI.ANY_TAG, status=status)
+        source = status.Get_source()
+        tag = status.Get_tag()
+        if tag == tags['READY']:
+            s_print ("Worker {} requesting task.".format(source))
+            # Worker is ready, so send it a task
+            if task_index < len(tasks):
+                comm.send(tasks[task_index], dest=source, tag=tags['START'])
+                print("Sending task {} to worker {}".format(task_index, source))
+                task_index += 1
+            else:
+                # s_print("\nAll tasks finished\n")
+                comm.send(None, dest=source, tag=tags['EXIT'])
+        elif tag == tags['DONE']:
+            results = data
+            print("Got data from worker {} : {}".format(source, results))
+            if results['had_to_create']:
+                number_sifts_written += 1
+        elif tag == tags['EXIT']:
+            # print("Worker {} exited.".format(source))
+            closed_workers += 1
+            timekeeper.time_now('worker {} exit'.format(source), True)
 
-                had_to_create = touch_sift(task)
-                result = {
-                    'img_path': task,
-                    'had_to_create': had_to_create
-                }
-                comm.send(result, dest=0, tag=tags['DONE'])
-            elif tag == tags['EXIT']:
-                # print('leaving worker loop')
-                break
+    timekeeper.time_now('master finished', True)
 
-        comm.send(None, dest=0, tag=tags['EXIT'])
-        s_print("Worker {} exiting".format(rank))
-        # comm.Barrier()
-except Exception as e:
-    s_print(str(e))
+    s_print("Master finishing")
+    print "Wrote " + str(number_sifts_written) + ' new SIFT files.'
+    print "Completed " + str(len(tasks)) + ' Tasks.'
+else:
+    # Worker processes execute code below
+    s_print("I am a worker with rank {} on {}.".format(rank, name))
+    while True:
+        comm.send(None, dest=0, tag=tags['READY'])
+        task = comm.recv(source=0, tag=MPI.ANY_TAG, status=status)
+        tag = status.Get_tag()
+
+        if tag == tags['START']:
+            # sleep(randint(0, 5))
+            # Do the work here
+            # result = task**2
+            # a = 0
+            # b = 0
+            # c = 0
+            # for a in range(1000):
+            #     for b in range(1000):
+            #         c += a + b
+            # result = task + "-ok-" + str(c)
+
+            had_to_create = touch_sift(task)
+            result = {
+                'img_path': task,
+                'had_to_create': had_to_create
+            }
+            comm.send(result, dest=0, tag=tags['DONE'])
+        elif tag == tags['EXIT']:
+            # print('leaving worker loop')
+            break
+
+    comm.send(None, dest=0, tag=tags['EXIT'])
+    s_print("Worker {} exiting".format(rank))
+    # comm.Barrier()
+
 
 
 comm.Barrier()
