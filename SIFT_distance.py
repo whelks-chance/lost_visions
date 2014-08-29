@@ -2,7 +2,12 @@ import os
 import cPickle
 import sys
 
-sys.path.append('/home/lostvisions/opencv_build/lib')
+try:
+    from local_settings import *
+except ImportError as ie:
+    print ie
+
+sys.path.append(OPENCV_LOCATION)
 import cv2
 import numpy as np
 # from datetime import time, datetime
