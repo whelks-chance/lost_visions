@@ -14,13 +14,22 @@ __author__ = 'lostvisions'
 from mpi4py import MPI
 import sys
 
+IMAGE_LOCATION = ['']
+MAX_FILES = 100
+
+try:
+    from local_settings import *
+except ImportError as ie:
+    print ie
+
+print IMAGE_LOCATION
 
 
 def s_print(t):
-    # try/:
-    sys.stdout.write(t + '\n')
-    # except Exception as e:
-    #     print "*****failed to safe print"
+    try:
+        sys.stdout.write(t + '\n')
+    except Exception as e:
+        print "*****failed to safe print"
 
 comm = MPI.COMM_WORLD
 size = MPI.COMM_WORLD.Get_size()
@@ -52,7 +61,7 @@ if rank == 0:
 
     # tasks = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't']
 
-    tasks = find_files(['./image_link/bl_images'], max_files=1000, filter_sift=True)
+    tasks = find_files(IMAGE_LOCATION, max_files=MAX_FILES, filter_sift=True)
 
     print 'found ' + str(len(tasks)) + ' files'
 
