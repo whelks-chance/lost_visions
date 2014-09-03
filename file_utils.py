@@ -36,7 +36,9 @@ def walk_folder(folder, all_files, max_files, filter_sift=False):
 
         fileName, fileExtension = os.path.splitext(a_file)
 
-        if os.path.isfile(os.path.join(folder, a_file)) and '.sift' not in fileExtension:
+        if os.path.isfile(os.path.join(folder, a_file)) \
+                and '.sift' not in fileExtension \
+                and '.jpg' in fileExtension:
             if filter_sift:
                 if os.path.isfile(os.path.join(folder, (a_file + '.sift'))):
                     pass

@@ -30,6 +30,16 @@ files = [
 ]
 
 
+def compare_descriptors(d1, d2, thresh):
+    print d1
+    print d2
+    with open(d1, 'wb') as f1:
+        keypoints, descriptors1 = unpickle_keypoints( cPickle.load(f1) )
+    with open(d2, 'wb') as f2:
+        keypoints, descriptors2 = unpickle_keypoints( cPickle.load(f2) )
+    return find_matches('', descriptors1, descriptors2, thresh)
+
+
 class ImageDescriptor():
     def __init__(self, img_idx, img_path):
         self.img_idx = img_idx
@@ -125,9 +135,13 @@ class ImageDescriptorManager():
     def quick_init(self, img_descriptor):
         self.add_descriptor(img_descriptor, add_to_set=False)
 
+
 # Check for SIFT file and create if not there
 # Return True if had to write file, False if already exists
-def touch_sift(img_path, detector=cv2.SIFT()):
+def touch_sift(img_path, detector=None):
+    if detector is None:
+        detector = cv2.SIFT()
+
     if os.path.isfile(img_path + '.sift'):
         print 'Found sift file : ' + img_path + '.sift'
         # print '.',
@@ -135,18 +149,27 @@ def touch_sift(img_path, detector=cv2.SIFT()):
         #     keypoints, descriptors = unpickle_keypoints( cPickle.load(f) )
         return False
     else:
-        print 'Creating sift : ' + img_path + '.sift'
-        img = cv2.imread(img_path)
-        img_gray = cv2.cvtColor( img, cv2.COLOR_BGR2GRAY )
-        keypoints, descriptors = detector.detectAndCompute(img_gray, None)
+        try:
+            print 'Creating sift : ' + img_path + '.sift'
+            img = cv2.imread(img_path)
+            img_gray = cv2.cvtColor( img, cv2.COLOR_BGR2GRAY )
+            del img
 
-        key_desc_temp = pickle_keypoints(keypoints, descriptors)
+            keypoints, descriptors = detector.detectAndCompute(img_gray, None)
+            del img_gray
 
-        with open(img_path + '.sift', 'wb') as f:
-            cPickle.dump(key_desc_temp, f, protocol=cPickle.HIGHEST_PROTOCOL)
-        del keypoints
-        del descriptors
-        return True
+            key_desc_temp = pickle_keypoints(keypoints, descriptors)
+            with open(img_path + '.sift', 'wb') as f:
+                cPickle.dump(key_desc_temp, f, protocol=cPickle.HIGHEST_PROTOCOL)
+            f.close()
+
+            del keypoints
+            del descriptors
+
+            return True
+        except cv2.error as ome:
+            print ome
+            return None
 
 
 def iterall(files_list, match_thresh=1.5):
