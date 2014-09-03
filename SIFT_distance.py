@@ -31,14 +31,14 @@ files = [
 
 
 def compare_descriptors(d1, d2, thresh):
-    print d1
-    print d2
-    with open(d1, 'wb') as f1:
-        keypoints, descriptors1 = unpickle_keypoints( cPickle.load(f1) )
-    with open(d2, 'wb') as f2:
-        keypoints, descriptors2 = unpickle_keypoints( cPickle.load(f2) )
-    return find_matches('', descriptors1, descriptors2, thresh)
-
+    if os.path.isfile(d1) and os.path.isfile(d1):
+        with open(d1, 'rb') as f1:
+            keypoints1, descriptors1 = unpickle_keypoints( cPickle.load(f1) )
+        with open(d2, 'rb') as f2:
+            keypoints2, descriptors2 = unpickle_keypoints( cPickle.load(f2) )
+        return find_matches('', descriptors1, descriptors2, thresh)
+    else:
+        return 0
 
 class ImageDescriptor():
     def __init__(self, img_idx, img_path):
@@ -162,6 +162,7 @@ def touch_sift(img_path, detector=None):
             with open(img_path + '.sift', 'wb') as f:
                 cPickle.dump(key_desc_temp, f, protocol=cPickle.HIGHEST_PROTOCOL)
             f.close()
+            del f
 
             del keypoints
             del descriptors

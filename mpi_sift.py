@@ -154,11 +154,7 @@ else:
 
         elif tag == tags['START_2']:
             print "\nTask 2 job here : " + str(task) + "\n"
-            print task[0]
-            print task[1]
-
             matches = compare_descriptors(task[0], task[1], 1.5)
-
             result = {
                 'task_no': 2,
                 'img_path': task,
