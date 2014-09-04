@@ -43,7 +43,9 @@ tags = {
     'DONE': 2,
     'EXIT': 3,
     'START': 4,
-    'START_2': 5
+    'START_2': 5,
+    'DONE_2': 6,
+    'WAIT': 7
 }
 
 status = MPI.Status()   # get MPI status object
@@ -54,13 +56,15 @@ if rank == 0:
     timekeeper.time_now('start', True)
 
     # Master process executes code below
-    tasks = find_files(IMAGE_LOCATION, max_files=MAX_FILES, filter_sift=True)
+    tasks = find_files(IMAGE_LOCATION, max_files=MAX_FILES, filter_sift=True, folder_spread=True)
     print 'found ' + str(len(tasks)) + ' files'
     task_index = 0
+    task_finished_index = 0
 
     descriptor_paths = []
     tasks2 = []
     task_index2 = 0
+    task2_finished_index = 0
 
     # timekeeper.time_now('Found files', True)
 
@@ -72,6 +76,8 @@ if rank == 0:
 
     task1_done = False
 
+    weights = []
+
     while closed_workers < num_workers:
         data = comm.recv(source=MPI.ANY_SOURCE, tag=MPI.ANY_TAG, status=status)
         source = status.Get_source()
@@ -82,12 +88,14 @@ if rank == 0:
             # Worker is ready, so send it a task
 
             if task_index < len(tasks):
-                comm.send(tasks[task_index], dest=source, tag=tags['START'])
                 print("Sending task {} to worker {}".format(task_index, source))
+                comm.send(tasks[task_index], dest=source, tag=tags['START'])
+                print("Sent task {} to worker {}".format(task_index, source))
+
                 task_index += 1
 
             else:
-                if len(descriptor_paths) == len(tasks):
+                if task_finished_index == len(tasks):
                     if not task1_done:
                         task1_done = True
                         #all task_1s_done, prepare task 2s here
@@ -98,18 +106,24 @@ if rank == 0:
 
                         tasks2 = [list(x) for x in itertools.combinations(descriptor_paths, 2)]
                         print '\n*** combinations ***'
-                        print tasks2
+                        print 'There will be ' + str(len(tasks2)) + ' combination task2 sift matches'
 
                     # All task1's complete, start sending task2's
                     if task_index2 < len(tasks2) and len(tasks2) > 0:
-                        comm.send(tasks2[task_index2], dest=source, tag=tags['START_2'])
                         print("Sending task2 {} to worker {}".format(task_index2, source))
+                        comm.send(tasks2[task_index2], dest=source, tag=tags['START_2'])
+                        print("Sent task2 {} to worker {}".format(task_index2, source))
+
                         task_index2 += 1
                     else:
                         print 'task_2_complete'
 
                         # s_print("\nAll tasks finished\n")
                         comm.send(None, dest=source, tag=tags['EXIT'])
+                else:
+                    print("Worker {} will be told to sleep and try again").format(source)
+                    comm.send({'wait': True}, dest=source, tag=tags['WAIT'])
+
 
         elif tag == tags['DONE']:
             results = data
@@ -121,6 +135,20 @@ if rank == 0:
 
             if 'had_to_create' in results and results['had_to_create']:
                 number_sifts_written += 1
+            task_finished_index += 1
+
+        elif tag == tags['DONE_2']:
+            results = data
+            print("Got data from worker {} : {}".format(source, results))
+            task2_finished_index += 1
+
+            weight = {
+                'img_a': results['img_path'][0],
+                'img_b': results['img_path'][1],
+                'weight': results['matches']
+            }
+
+            weights.append(weight)
 
         elif tag == tags['EXIT']:
             # print("Worker {} exited.".format(source))
@@ -130,8 +158,15 @@ if rank == 0:
     timekeeper.time_now('master finished', True)
 
     s_print("Master finishing")
+    print "Weights : "
+    sorted_weights = sorted(weights, key=lambda k: k['weight'])
+    for w in sorted_weights:
+        print "img_a {} \nimg_b {} \nWeight {}\n".format(w['img_a'], w['img_b'], w['weight'])
+
     print "Wrote " + str(number_sifts_written) + ' new SIFT files.'
     print "Completed " + str(len(tasks)) + ' Tasks.'
+    print "Completed " + str(len(tasks2)) + ' Matches.'
+
 else:
     # Worker processes execute code below
     s_print("I am a worker with rank {} on {}.".format(rank, name))
@@ -140,10 +175,15 @@ else:
         task = comm.recv(source=0, tag=MPI.ANY_TAG, status=status)
         tag = status.Get_tag()
 
+        if tag == tags['WAIT']:
+            sleep(1)
+            result = {'done_waiting': True}
+            comm.send(result, dest=0, tag=tags['READY'])
+
         if tag == tags['START']:
             had_to_create = touch_sift(task)
             # had_to_create = False
-            print "\nTask 1 job here : " + task + "\n"
+            print "\nWorker {} performed task1 job here : ".format(rank) + str(task) + "\n"
             result = {
                 'task_no': 1,
                 'img_path': task,
@@ -153,7 +193,7 @@ else:
             comm.send(result, dest=0, tag=tags['DONE'])
 
         elif tag == tags['START_2']:
-            print "\nTask 2 job here : " + str(task) + "\n"
+            print "\nWorker {} performed task2 job here : ".format(rank) + str(task) + "\n"
             matches = compare_descriptors(task[0], task[1], 1.5)
             result = {
                 'task_no': 2,
@@ -161,7 +201,7 @@ else:
                 'did_task_2': True,
                 'matches': matches
             }
-            comm.send(result, dest=0, tag=tags['DONE'])
+            comm.send(result, dest=0, tag=tags['DONE_2'])
 
         elif tag == tags['EXIT']:
             # print('leaving worker loop')

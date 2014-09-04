@@ -36,7 +36,9 @@ def compare_descriptors(d1, d2, thresh):
             keypoints1, descriptors1 = unpickle_keypoints( cPickle.load(f1) )
         with open(d2, 'rb') as f2:
             keypoints2, descriptors2 = unpickle_keypoints( cPickle.load(f2) )
-        return find_matches('', descriptors1, descriptors2, thresh)
+        # return find_matches('', descriptors1, descriptors2, thresh)
+        return find_ORB_matches('', descriptors1, descriptors2, thresh)
+
     else:
         return 0
 
@@ -140,7 +142,7 @@ class ImageDescriptorManager():
 # Return True if had to write file, False if already exists
 def touch_sift(img_path, detector=None):
     if detector is None:
-        detector = cv2.SIFT()
+        detector = cv2.ORB()
 
     if os.path.isfile(img_path + '.sift'):
         print 'Found sift file : ' + img_path + '.sift'
@@ -406,6 +408,18 @@ def find_matches(desc, template_descriptors, current_img_descriptors, match_thre
     pass_filter = dist[:,0]*match_thresh < dist[:,1]
     matches = matches[pass_filter]
 
+    return len(matches)
+
+
+def find_ORB_matches(desc, des1, des2, match_thresh):
+        # create BFMatcher object
+    bf = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=True)
+
+    # Match descriptors.
+    matches = bf.match(des1, des2)
+
+    # Sort them in the order of their distance.
+    matches = sorted(matches, key = lambda x:x.distance)
     return len(matches)
 
 # to_match = find_files(['./learn-all'])
