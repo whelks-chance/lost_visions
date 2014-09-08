@@ -8,7 +8,7 @@ __author__ = 'lostvisions'
 # Does not return xxyyzz.xyz.sift files
 # Array of file paths returned will have maximum of max_files entries
 # With filter_sift=True does not return xxyyzz.xyz if xxyyzz.xyz.sift already exists
-def find_files(folders, max_files=100, filter_sift=False, folder_spread=False):
+def find_files(folders, max_files=100, filter_descriptor=None, folder_spread=False):
     all_files = []
 
     print max_files
@@ -20,7 +20,7 @@ def find_files(folders, max_files=100, filter_sift=False, folder_spread=False):
 
 
     for folder in folders:
-        all_files = walk_folder(folder, all_files, max_files, filter_sift, folder_count)
+        all_files = walk_folder(folder, all_files, max_files, filter_descriptor, folder_count)
         print all_files
         if len(all_files) > max_files:
             break
@@ -39,7 +39,7 @@ def find_files(folders, max_files=100, filter_sift=False, folder_spread=False):
 # Array of file paths returned will have maximum of max_files entries
 # Does not return xxyyzz.xyz.sift files
 #  With filter_sift=True does not return xxyyzz.xyz if xxyyzz.xyz.sift already exists
-def walk_folder(folder, all_files, max_files, filter_sift=False, folder_count = None):
+def walk_folder(folder, all_files, max_files, filter_descriptor=None, folder_count = None):
     found_count = 0
     for a_file in os.listdir(folder):
         if len(all_files) > max_files:
@@ -52,7 +52,7 @@ def walk_folder(folder, all_files, max_files, filter_sift=False, folder_count = 
         if os.path.isfile(os.path.join(folder, a_file)) \
                 and '.sift' not in fileExtension \
                 and '.jpg' in fileExtension:
-            if filter_sift:
+            if filter_descriptor:
                 if os.path.isfile(os.path.join(folder, (a_file + '.sift'))):
                     pass
                 else:
@@ -63,6 +63,6 @@ def walk_folder(folder, all_files, max_files, filter_sift=False, folder_count = 
                 found_count += 1
 
         if os.path.isdir(os.path.join(folder, a_file)):
-            all_files = walk_folder(os.path.join(folder, a_file), all_files, max_files, filter_sift)
+            all_files = walk_folder(os.path.join(folder, a_file), all_files, max_files, filter_descriptor)
     return all_files
 

@@ -1,6 +1,7 @@
 from random import randint
 from time import sleep
 import itertools
+from ORB_match import ShowStuff
 from SIFT_distance import touch_sift, compare_descriptors
 from TimeKeeper import TimeKeeper
 from file_utils import find_files
@@ -18,6 +19,12 @@ import sys
 IMAGE_LOCATION = ['']
 OPENCV_LOCATION = ""
 MAX_FILES = 100
+DESCRIPTORS = [
+    {
+        'name': 'sift',
+        'ext': '.sift'
+    }
+]
 
 try:
     from local_settings import *
@@ -55,8 +62,28 @@ if rank == 0:
     timekeeper = TimeKeeper()
     timekeeper.time_now('start', True)
 
-    # Master process executes code below
-    tasks = find_files(IMAGE_LOCATION, max_files=MAX_FILES, filter_sift=True, folder_spread=True)
+    # tasks = []
+    # # Master process executes code below
+    # for desc in DESCRIPTORS:
+    #     files = find_files(
+    #         IMAGE_LOCATION,
+    #         max_files=MAX_FILES,
+    #         filter_descriptor=desc['ext'],
+    #         folder_spread=True
+    #     )
+    #     for file in files:
+    #         tasks.append({
+    #             'ext': desc['ext'],
+    #             'image': file
+    #         })
+    tasks = find_files(
+        IMAGE_LOCATION,
+        max_files=MAX_FILES,
+        filter_descriptor = 'sift',
+        folder_spread=True
+    )
+
+
     print 'found ' + str(len(tasks)) + ' files'
     task_index = 0
     task_finished_index = 0
@@ -166,6 +193,13 @@ if rank == 0:
     print "Wrote " + str(number_sifts_written) + ' new SIFT files.'
     print "Completed " + str(len(tasks)) + ' Tasks.'
     print "Completed " + str(len(tasks2)) + ' Matches.'
+
+    best_match = sorted_weights[-3:]
+    for b in best_match:
+        print b
+
+        ss = ShowStuff()
+        ss.show_ORB(b['img_a'].replace('.sift', ''), b['img_b'].replace('.sift', ''))
 
 else:
     # Worker processes execute code below
