@@ -13,7 +13,6 @@ import numpy as np
 # from datetime import time, datetime
 import nltk
 from TimeKeeper import TimeKeeper
-from file_utils import find_files
 
 __author__ = 'ubuntu'
 
@@ -140,19 +139,27 @@ class ImageDescriptorManager():
 
 # Check for SIFT file and create if not there
 # Return True if had to write file, False if already exists
-def touch_sift(img_path, detector=None):
-    if detector is None:
-        detector = cv2.ORB()
+def touch_descriptor(img_path, detector_ext=None, output_path=None):
 
-    if os.path.isfile(img_path + '.sift'):
-        print 'Found sift file : ' + img_path + '.sift'
-        # print '.',
-        # with open(img_path + '.sift', 'rb') as f:
-        #     keypoints, descriptors = unpickle_keypoints( cPickle.load(f) )
+    print '\n*********' + detector_ext
+
+    if detector_ext == '.sift':
+        detector = cv2.SIFT()
+    elif detector_ext == '.orb':
+        detector = cv2.ORB()
+    else:
+        return None
+
+    descriptor_path = img_path + detector_ext
+    if output_path is not None:
+        descriptor_path = os.path.join(output_path, 'desc' + detector_ext)
+
+    if os.path.isfile(descriptor_path):
+        print 'Found descriptor file : ' + descriptor_path
         return False
     else:
         try:
-            print 'Creating sift : ' + img_path + '.sift'
+            print 'Creating descriptor : ' + descriptor_path
             img = cv2.imread(img_path)
             img_gray = cv2.cvtColor( img, cv2.COLOR_BGR2GRAY )
             del img
@@ -161,7 +168,7 @@ def touch_sift(img_path, detector=None):
             del img_gray
 
             key_desc_temp = pickle_keypoints(keypoints, descriptors)
-            with open(img_path + '.sift', 'wb') as f:
+            with open(descriptor_path, 'wb') as f:
                 cPickle.dump(key_desc_temp, f, protocol=cPickle.HIGHEST_PROTOCOL)
             f.close()
             del f
@@ -211,7 +218,7 @@ def iterall(files_list, match_thresh=1.5):
         #     del keypoints
         #     del descriptors
         #     wrote_sift += 1
-        already_existed = touch_sift(img_path, detector)
+        already_existed = touch_descriptor(img_path, detector)
         if not already_existed:
             wrote_sift += 1
 

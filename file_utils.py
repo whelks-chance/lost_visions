@@ -10,27 +10,25 @@ __author__ = 'lostvisions'
 # With filter_sift=True does not return xxyyzz.xyz if xxyyzz.xyz.sift already exists
 def find_files(folders, max_files=100, filter_descriptor=None, folder_spread=False):
     all_files = []
+    files_dict = {}
 
-    print max_files
+    print 'Finding max ' + str(max_files) + ' files'
     folder_count = None
     if folder_spread:
-        print "non-ceil {}".format(str(max_files/ len(folders)))
+        # print "non-ceil {}".format(str(max_files/ len(folders)))
         folder_count = math.ceil(max_files / float(len(folders)))
-        print "{} files per folder. {} folders total".format(folder_count, len(folders))
-
+        print "Max {} files per folder. {} folders total. May be less due to rounding".format(folder_count, len(folders))
 
     for folder in folders:
         all_files = walk_folder(folder, all_files, max_files, filter_descriptor, folder_count)
-        print all_files
         if len(all_files) > max_files:
             break
 
     # print 'Found ' + str(len(all_files)) + ' files'
-    files_dict = {}
     for f in all_files[:max_files]:
         files_dict[int(len(files_dict))] = f
 
-    # print str(files_dict) + '\n\n****\n'
+    print str(files_dict) + '\n\n****\n'
     # print 'Loading ' + str(len(files_dict)) + ' files.'
     return files_dict
 

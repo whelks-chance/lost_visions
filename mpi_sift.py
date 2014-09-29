@@ -1,8 +1,10 @@
-from random import randint
+import os
+import pprint
 from time import sleep
 import itertools
-from ORB_match import ShowStuff
-from SIFT_distance import touch_sift, compare_descriptors
+# from ORB_match import ShowStuff
+from ORB_processor import ORB_processor
+from SIFT_processor import SIFT_processor
 from TimeKeeper import TimeKeeper
 from file_utils import find_files
 
@@ -12,17 +14,21 @@ __author__ = 'lostvisions'
 # https://www.tacc.utexas.edu/c/document_library/get_file?uuid=be16db01-57d9-4422-b5d5-17625445f351
 # http://materials.jeremybejarano.com/MPIwithPython/collectiveCom.html
 
+#now so heavily messed with, the above cannot be held responsible for its current form
+
 
 from mpi4py import MPI
 import sys
 
 IMAGE_LOCATION = ['']
+OUTPUT_PATH = ''
 OPENCV_LOCATION = ""
 MAX_FILES = 100
 DESCRIPTORS = [
     {
         'name': 'sift',
-        'ext': '.sift'
+        'ext': '.sift',
+        'path': './outputs/sift/'
     }
 ]
 
@@ -31,11 +37,19 @@ try:
 except ImportError as ie:
     print ie
 
+
 def s_print(t):
     try:
         sys.stdout.write(t + '\n')
     except Exception as e:
         print "*****failed to safe print"
+
+
+def get_descriptor_processor(ext):
+    if ext in '.sift':
+        return SIFT_processor()
+    if ext in '.orb':
+        return ORB_processor()
 
 comm = MPI.COMM_WORLD
 size = MPI.COMM_WORLD.Get_size()
@@ -62,8 +76,8 @@ if rank == 0:
     timekeeper = TimeKeeper()
     timekeeper.time_now('start', True)
 
-    # tasks = []
-    # # Master process executes code below
+    tasks = []
+    # Master process executes code below
     # for desc in DESCRIPTORS:
     #     files = find_files(
     #         IMAGE_LOCATION,
@@ -74,21 +88,44 @@ if rank == 0:
     #     for file in files:
     #         tasks.append({
     #             'ext': desc['ext'],
-    #             'image': file
+    #             'img_path': file,
+    #             'output_path': OUTPUT_PATH
     #         })
-    tasks = find_files(
+
+    # Find files
+    # For the moment skip any clever filtering of existing descriptor existance
+    # TODO come back and add this in
+
+    files = find_files(
         IMAGE_LOCATION,
         max_files=MAX_FILES,
-        filter_descriptor = 'sift',
+        filter_descriptor=None,
         folder_spread=True
     )
+    tasks = []
 
+    for fi in files:
+        f = files[fi]
+        root_dir = os.path.dirname(os.path.realpath(f))
+        new_path = os.path.join(OUTPUT_PATH, os.path.relpath(f))
+        try:
+            os.makedirs(new_path)
+        except:
+            pass
 
-    print 'found ' + str(len(tasks)) + ' files'
+        for desc in DESCRIPTORS:
+            tasks.append({
+                'img_path': f,
+                'descriptor': desc['ext'],
+                'output_path': new_path
+            })
+
+    print 'Created ' + str(len(tasks)) + ' tasks; ' \
+          + str(len(files)) + ' files and ' + str(len(DESCRIPTORS)) + ' descriptors'
     task_index = 0
     task_finished_index = 0
 
-    descriptor_paths = []
+    descriptor_paths = dict()
     tasks2 = []
     task_index2 = 0
     task2_finished_index = 0
@@ -99,7 +136,7 @@ if rank == 0:
     closed_workers = 0
     s_print("Master starting with {} workers".format(num_workers))
 
-    number_sifts_written = 0
+    number_descriptors_written = 0
 
     task1_done = False
 
@@ -126,14 +163,26 @@ if rank == 0:
                     if not task1_done:
                         task1_done = True
                         #all task_1s_done, prepare task 2s here
-                        print 'number of sifts written : ' + str(number_sifts_written)
+                        print 'number of descriptors written : ' + str(number_descriptors_written)
 
-                        print '\n*** sift paths ***'
-                        print descriptor_paths
+                        print '\n*** descriptor paths ***'
+                        print pprint.pformat(descriptor_paths, indent=1, width=80, depth=None)
 
-                        tasks2 = [list(x) for x in itertools.combinations(descriptor_paths, 2)]
+                        # TODO this bit
+
+                        for descriptor_key in descriptor_paths:
+                            for pair in (list(x) for x in itertools.combinations(descriptor_paths[descriptor_key], 2)):
+                                tasks2.append({
+                                    'descriptor':descriptor_key,
+                                    'd1': pair[0],
+                                    'd2': pair[1]
+                                })
+
+                        # tasks2 = [list(x) for x in itertools.combinations(descriptor_paths, 2)]
                         print '\n*** combinations ***'
-                        print 'There will be ' + str(len(tasks2)) + ' combination task2 sift matches'
+                        print 'There will be ' + str(len(tasks2)) + ' combination task2 descriptor matches'
+                        print pprint.pformat(tasks2, indent=1, width=80, depth=None)
+
 
                     # All task1's complete, start sending task2's
                     if task_index2 < len(tasks2) and len(tasks2) > 0:
@@ -148,25 +197,38 @@ if rank == 0:
                         # s_print("\nAll tasks finished\n")
                         comm.send(None, dest=source, tag=tags['EXIT'])
                 else:
-                    print("Worker {} will be told to sleep and try again").format(source)
+                    print("Worker {} will be told to sleep and try again".format(source))
                     comm.send({'wait': True}, dest=source, tag=tags['WAIT'])
-
 
         elif tag == tags['DONE']:
             results = data
-            print("Got data from worker {} : {}".format(source, results))
+            print("Got data from worker {} : {}\n".format(source, pprint.pformat(
+                results, indent=1, width=80, depth=None
+            )))
 
-            if 'descriptor_path' in results:
-                # print '*-*-*' + str(results['descriptor_path'])
-                descriptor_paths.append(results['descriptor_path'])
+            if results['success']:
+                # if 'descriptor_path' in results:
+                    # print '*-*-*' + str(results['descriptor_path'])
+                    # descriptor_paths.append({
+                    #     'descriptor_path': results['descriptor_path'],
+                    #     'descriptor': results['descriptor']
+                    # })
+                if not results['descriptor'] in descriptor_paths:
+                    descriptor_paths[results['descriptor']] = []
+                descriptor_paths.get(results['descriptor']).append(results['descriptor_path'])
 
-            if 'had_to_create' in results and results['had_to_create']:
-                number_sifts_written += 1
+                print pprint.pformat(descriptor_paths, indent=1, width=80, depth=None)
+
+                if 'had_to_create' in results and results['had_to_create']:
+                    number_descriptors_written += 1
             task_finished_index += 1
 
         elif tag == tags['DONE_2']:
             results = data
-            print("Got data from worker {} : {}".format(source, results))
+            print("Got data from worker {} : {}\n".format(source, pprint.pformat(
+                results, indent=1, width=80, depth=None
+            )))
+
             task2_finished_index += 1
 
             weight = {
@@ -190,7 +252,7 @@ if rank == 0:
     for w in sorted_weights:
         print "img_a {} \nimg_b {} \nWeight {}\n".format(w['img_a'], w['img_b'], w['weight'])
 
-    print "Wrote " + str(number_sifts_written) + ' new SIFT files.'
+    print "Wrote " + str(number_descriptors_written) + ' new Descriptor files.'
     print "Completed " + str(len(tasks)) + ' Tasks.'
     print "Completed " + str(len(tasks2)) + ' Matches.'
 
@@ -198,8 +260,9 @@ if rank == 0:
     for b in best_match:
         print b
 
-        ss = ShowStuff()
-        ss.show_ORB(b['img_a'].replace('.sift', ''), b['img_b'].replace('.sift', ''))
+        #TODO, this is daft
+        # ss = ShowStuff()
+        # ss.show_ORB(b['img_a'].replace('.sift', ''), b['img_b'].replace('.sift', ''))
 
 else:
     # Worker processes execute code below
@@ -215,23 +278,37 @@ else:
             comm.send(result, dest=0, tag=tags['READY'])
 
         if tag == tags['START']:
-            had_to_create = touch_sift(task)
+
+            desc_proc = get_descriptor_processor(task['descriptor'])
+            creation_response = desc_proc.touch_descriptor(task['img_path'],
+                                             detector_ext=task['descriptor'],
+                                             output_path=task['output_path'])
             # had_to_create = False
-            print "\nWorker {} performed task1 job here : ".format(rank) + str(task) + "\n"
+            print "\nWorker {} performed task1 job here :\n {}\n".format(rank,
+                                                                         pprint.pformat(
+                                                                             task, indent=1, width=80, depth=None
+                                                                         ))
             result = {
                 'task_no': 1,
-                'img_path': task,
-                'had_to_create': had_to_create,
-                'descriptor_path': task + '.sift'
+                'processing_class': desc_proc.name,
+                'img_path': task['img_path'],
+                'had_to_create': creation_response.had_to_create,
+                'descriptor': task['descriptor'],
+                'descriptor_path': creation_response.descriptor_path,
+                # if error is None, we're al good
+                'success': creation_response.error is None
             }
             comm.send(result, dest=0, tag=tags['DONE'])
 
         elif tag == tags['START_2']:
             print "\nWorker {} performed task2 job here : ".format(rank) + str(task) + "\n"
-            matches = compare_descriptors(task[0], task[1], 1.5)
+
+            desc_proc = get_descriptor_processor(task['descriptor'])
+
+            matches = desc_proc.compare_descriptors(task['d1'], task['d2'], 1.5)
             result = {
                 'task_no': 2,
-                'img_path': task,
+                'img_path': [task['d1'], task['d2']],
                 'did_task_2': True,
                 'matches': matches
             }
