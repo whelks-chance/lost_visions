@@ -7,6 +7,7 @@ from ORB_processor import ORB_processor
 from SIFT_processor import SIFT_processor
 from TimeKeeper import TimeKeeper
 from file_utils import find_files
+from graphs import create_graph
 
 __author__ = 'lostvisions'
 
@@ -78,19 +79,7 @@ if rank == 0:
 
     tasks = []
     # Master process executes code below
-    # for desc in DESCRIPTORS:
-    #     files = find_files(
-    #         IMAGE_LOCATION,
-    #         max_files=MAX_FILES,
-    #         filter_descriptor=desc['ext'],
-    #         folder_spread=True
-    #     )
-    #     for file in files:
-    #         tasks.append({
-    #             'ext': desc['ext'],
-    #             'img_path': file,
-    #             'output_path': OUTPUT_PATH
-    #         })
+
 
     # Find files
     # For the moment skip any clever filtering of existing descriptor existance
@@ -168,8 +157,8 @@ if rank == 0:
                         print '\n*** descriptor paths ***'
                         print pprint.pformat(descriptor_paths, indent=1, width=80, depth=None)
 
-                        # TODO this bit
-
+                        # For each descriptor in the paths returned, calculate all the pairs for comparisons
+                        # These become the "task2"s which return similarities between images.
                         for descriptor_key in descriptor_paths:
                             for pair in (list(x) for x in itertools.combinations(descriptor_paths[descriptor_key], 2)):
                                 tasks2.append({
@@ -215,7 +204,10 @@ if rank == 0:
                     # })
                 if not results['descriptor'] in descriptor_paths:
                     descriptor_paths[results['descriptor']] = []
-                descriptor_paths.get(results['descriptor']).append(results['descriptor_path'])
+                descriptor_paths.get(results['descriptor']).append({
+                    'descriptor_path': results['descriptor_path'],
+                    'image': results['img_path']
+                })
 
                 print pprint.pformat(descriptor_paths, indent=1, width=80, depth=None)
 
@@ -232,8 +224,11 @@ if rank == 0:
             task2_finished_index += 1
 
             weight = {
-                'img_a': results['img_path'][0],
-                'img_b': results['img_path'][1],
+                'descriptor': results['descriptor'],
+                'img_a': results['img_path_1'],
+                'img_b': results['img_path_2'],
+                'descriptor_1': results['descriptor_1'],
+                'descriptor_2': results['descriptor_2'],
                 'weight': results['matches']
             }
 
@@ -250,7 +245,7 @@ if rank == 0:
     print "Weights : "
     sorted_weights = sorted(weights, key=lambda k: k['weight'])
     for w in sorted_weights:
-        print "img_a {} \nimg_b {} \nWeight {}\n".format(w['img_a'], w['img_b'], w['weight'])
+        print "img_a {} \nimg_b {} \nWeight {}\nDESC {}".format(w['img_a'], w['img_b'], w['weight'], w['descriptor'])
 
     print "Wrote " + str(number_descriptors_written) + ' new Descriptor files.'
     print "Completed " + str(len(tasks)) + ' Tasks.'
@@ -258,12 +253,13 @@ if rank == 0:
 
     best_match = sorted_weights[-3:]
     for b in best_match:
-        print b
+        print '\n{}\n'.format(pprint.pformat(b, indent=1, width=80, depth=None))
 
         #TODO, this is daft
         # ss = ShowStuff()
         # ss.show_ORB(b['img_a'].replace('.sift', ''), b['img_b'].replace('.sift', ''))
 
+    create_graph(sorted_weights)
 else:
     # Worker processes execute code below
     s_print("I am a worker with rank {} on {}.".format(rank, name))
@@ -305,10 +301,14 @@ else:
 
             desc_proc = get_descriptor_processor(task['descriptor'])
 
-            matches = desc_proc.compare_descriptors(task['d1'], task['d2'], 1.5)
+            matches = desc_proc.compare_descriptors(task['d1']['descriptor_path'], task['d2']['descriptor_path'], 1.5)
             result = {
                 'task_no': 2,
-                'img_path': [task['d1'], task['d2']],
+                'descriptor': task['descriptor'],
+                'img_path_1': task['d1']['image'],
+                'img_path_2': task['d2']['image'],
+                'descriptor_1': task['d1']['descriptor_path'],
+                'descriptor_2': task['d2']['descriptor_path'],
                 'did_task_2': True,
                 'matches': matches
             }
