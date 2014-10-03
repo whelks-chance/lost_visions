@@ -271,7 +271,11 @@ if rank == 0:
         # ss = ShowStuff()
         # ss.show_ORB(b['img_a'].replace('.sift', ''), b['img_b'].replace('.sift', ''))
 
-    create_graph(sorted_weights)
+    with open('matches_data.txt', 'wb') as f:
+        f.write(pprint.pformat(sorted_weights, indent=1, width=80, depth=None))
+    f.close()
+    
+    # create_graph(sorted_weights)
 else:
     # Worker processes execute code below
     s_print("I am a worker with rank {} on {}.".format(rank, name))
