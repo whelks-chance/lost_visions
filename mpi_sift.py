@@ -21,7 +21,8 @@ __author__ = 'lostvisions'
 from mpi4py import MPI
 import sys
 
-IMAGE_LOCATION = ['']
+#  All these willbe overwritten with locat settings
+IMAGE_LOCATIONS = ['']
 OUTPUT_PATH = ''
 OPENCV_LOCATION = ""
 MAX_FILES = 100
@@ -32,6 +33,7 @@ DESCRIPTORS = [
         'path': './outputs/sift/'
     }
 ]
+# Ignore all above, placeholders only
 
 try:
     from local_settings import *
@@ -86,7 +88,7 @@ if rank == 0:
     # TODO come back and add this in
 
     files = find_files(
-        IMAGE_LOCATION,
+        IMAGE_LOCATIONS,
         max_files=MAX_FILES,
         filter_descriptor=None,
         folder_spread=True
@@ -95,8 +97,14 @@ if rank == 0:
 
     for fi in files:
         f = files[fi]
-        root_dir = os.path.dirname(os.path.realpath(f))
-        new_path = os.path.join(OUTPUT_PATH, os.path.relpath(f))
+
+        for parent_path in IMAGE_LOCATIONS:
+            if parent_path in f:
+
+                # TODO yeah....
+                rel_path = os.path.relpath(f, os.path.join(parent_path, '..'))
+        # root_dir = os.path.dirname(os.path.realpath(f))
+                new_path = os.path.join(OUTPUT_PATH, rel_path)
         try:
             os.makedirs(new_path)
         except:
@@ -111,6 +119,10 @@ if rank == 0:
 
     print 'Created ' + str(len(tasks)) + ' tasks; ' \
           + str(len(files)) + ' files and ' + str(len(DESCRIPTORS)) + ' descriptors'
+
+    for t in tasks:
+        print pprint.pformat(t, indent=1, width=80, depth=None)
+
     task_index = 0
     task_finished_index = 0
 

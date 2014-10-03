@@ -24,12 +24,14 @@ class SIFT_processor(DescriptorBase):
     def touch_descriptor(self, img_path, detector_ext=None, output_path=None):
 
         print '\n*********' + detector_ext
+        print output_path
 
         detector = cv2.SIFT()
 
-        descriptor_path = img_path + detector_ext
         if output_path is not None:
             descriptor_path = os.path.join(output_path, 'desc' + detector_ext)
+        else:
+            descriptor_path = img_path + detector_ext
 
         if os.path.isfile(descriptor_path):
             print 'Found descriptor file : ' + descriptor_path

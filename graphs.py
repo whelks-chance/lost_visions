@@ -56,7 +56,7 @@ def create_graph(matches):
     for match in matches:
         length = maximums[match['descriptor']] - match['weight']
 
-        if 'orb' in match['descriptor'] and length < (maximums[match['descriptor']] * 0.3):
+        if 'orb' in match['descriptor'] and length < (maximums[match['descriptor']] * 0.4):
             colour = "yellow"
             if 'map' in match['img_a']:
                 colour = 'green'
