@@ -33,6 +33,15 @@ DESCRIPTORS = [
         'path': './outputs/sift/'
     }
 ]
+
+DO_TASKS = {
+    'create_descriptors': True,
+    'save_descriptor_paths': True,
+    'match_descriptors': True,
+    'save_matches': True,
+    'create_graphs': True
+}
+
 # Ignore all above, placeholders only
 
 try:
@@ -110,12 +119,13 @@ if rank == 0:
         except:
             pass
 
-        for desc in DESCRIPTORS:
-            tasks.append({
-                'img_path': f,
-                'descriptor': desc['ext'],
-                'output_path': new_path
-            })
+        if DO_TASKS['create_descriptors']:
+            for desc in DESCRIPTORS:
+                tasks.append({
+                    'img_path': f,
+                    'descriptor': desc['ext'],
+                    'output_path': new_path
+                })
 
     print 'Created ' + str(len(tasks)) + ' tasks; ' \
           + str(len(files)) + ' files and ' + str(len(DESCRIPTORS)) + ' descriptors'
@@ -131,7 +141,7 @@ if rank == 0:
     task_index2 = 0
     task2_finished_index = 0
 
-    # timekeeper.time_now('Found files', True)
+    timekeeper.time_now('Found files', True)
 
     num_workers = size - 1
     closed_workers = 0
@@ -164,6 +174,8 @@ if rank == 0:
                     if not task1_done:
                         task1_done = True
                         #all task_1s_done, prepare task 2s here
+                        timekeeper.time_now('descriptors written', True)
+
                         print 'number of descriptors written : ' + str(number_descriptors_written)
 
                         print '\n*** descriptor paths ***'
@@ -171,19 +183,19 @@ if rank == 0:
 
                         # For each descriptor in the paths returned, calculate all the pairs for comparisons
                         # These become the "task2"s which return similarities between images.
-                        for descriptor_key in descriptor_paths:
-                            for pair in (list(x) for x in itertools.combinations(descriptor_paths[descriptor_key], 2)):
-                                tasks2.append({
-                                    'descriptor':descriptor_key,
-                                    'd1': pair[0],
-                                    'd2': pair[1]
-                                })
+                        if DO_TASKS['match_descriptors']:
+                            for descriptor_key in descriptor_paths:
+                                for pair in (list(x) for x in itertools.combinations(descriptor_paths[descriptor_key], 2)):
+                                    tasks2.append({
+                                        'descriptor':descriptor_key,
+                                        'd1': pair[0],
+                                        'd2': pair[1]
+                                    })
 
                         # tasks2 = [list(x) for x in itertools.combinations(descriptor_paths, 2)]
                         print '\n*** combinations ***'
                         print 'There will be ' + str(len(tasks2)) + ' combination task2 descriptor matches'
                         print pprint.pformat(tasks2, indent=1, width=80, depth=None)
-
 
                     # All task1's complete, start sending task2's
                     if task_index2 < len(tasks2) and len(tasks2) > 0:
@@ -221,7 +233,7 @@ if rank == 0:
                     'image': results['img_path']
                 })
 
-                print pprint.pformat(descriptor_paths, indent=1, width=80, depth=None)
+                # print pprint.pformat(descriptor_paths, indent=1, width=80, depth=None)
 
                 if 'had_to_create' in results and results['had_to_create']:
                     number_descriptors_written += 1
@@ -271,11 +283,18 @@ if rank == 0:
         # ss = ShowStuff()
         # ss.show_ORB(b['img_a'].replace('.sift', ''), b['img_b'].replace('.sift', ''))
 
-    with open('matches_data.txt', 'wb') as f:
-        f.write(pprint.pformat(sorted_weights, indent=1, width=80, depth=None))
-    f.close()
-    
-    # create_graph(sorted_weights)
+    if DO_TASKS['save_descriptor_paths']:
+        with open('descriptor_paths.txt', 'wb') as f1:
+            f1.write(pprint.pformat(descriptor_paths, indent=1, width=80, depth=None))
+        f1.close()
+
+    if DO_TASKS['save_matches']:
+        with open('matches_data.txt', 'wb') as f2:
+            f2.write(pprint.pformat(sorted_weights, indent=1, width=80, depth=None))
+        f2.close()
+
+    if DO_TASKS['create_graphs']:
+        create_graph(sorted_weights)
 else:
     # Worker processes execute code below
     s_print("I am a worker with rank {} on {}.".format(rank, name))

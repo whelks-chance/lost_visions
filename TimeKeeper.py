@@ -29,6 +29,10 @@ class TimeKeeper():
 
             if print_out:
                 print 'Time delta : ' + str(delta.total_seconds())
+
+                start = self.times[0]
+                start_delta = current_instant.time - start.time
+                print 'Time since start : ' + str(start_delta.total_seconds())
                 print '****************\n'
 
             self.times.append(current_instant)
