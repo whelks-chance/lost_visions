@@ -88,44 +88,45 @@ if rank == 0:
     timekeeper = TimeKeeper()
     timekeeper.time_now('start', True)
 
+    files = []
     tasks = []
     # Master process executes code below
-
 
     # Find files
     # For the moment skip any clever filtering of existing descriptor existance
     # TODO come back and add this in
 
-    files = find_files(
-        IMAGE_LOCATIONS,
-        max_files=MAX_FILES,
-        filter_descriptor=None,
-        folder_spread=True
-    )
-    tasks = []
+    if DO_TASKS['find_files']:
+        files = find_files(
+            IMAGE_LOCATIONS,
+            max_files=MAX_FILES,
+            filter_descriptors=DESCRIPTORS,
+            output_path=OUTPUT_PATH,
+            folder_spread=True
+        )
 
-    for fi in files:
-        f = files[fi]
+        for fi in files:
+            f = files[fi]
 
-        for parent_path in IMAGE_LOCATIONS:
-            if parent_path in f:
+            for parent_path in IMAGE_LOCATIONS:
+                if parent_path in f:
 
-                # TODO yeah....
-                rel_path = os.path.relpath(f, os.path.join(parent_path, '..'))
-        # root_dir = os.path.dirname(os.path.realpath(f))
-                new_path = os.path.join(OUTPUT_PATH, rel_path)
-        try:
-            os.makedirs(new_path)
-        except:
-            pass
+                    # TODO yeah....
+                    rel_path = os.path.relpath(f, os.path.join(parent_path, '..'))
+            # root_dir = os.path.dirname(os.path.realpath(f))
+                    new_path = os.path.join(OUTPUT_PATH, rel_path)
+            try:
+                os.makedirs(new_path)
+            except:
+                pass
 
-        if DO_TASKS['create_descriptors']:
-            for desc in DESCRIPTORS:
-                tasks.append({
-                    'img_path': f,
-                    'descriptor': desc['ext'],
-                    'output_path': new_path
-                })
+            if DO_TASKS['create_descriptors']:
+                for desc in DESCRIPTORS:
+                    tasks.append({
+                        'img_path': f,
+                        'descriptor': desc['ext'],
+                        'output_path': new_path
+                    })
 
     print 'Created ' + str(len(tasks)) + ' tasks; ' \
           + str(len(files)) + ' files and ' + str(len(DESCRIPTORS)) + ' descriptors'
