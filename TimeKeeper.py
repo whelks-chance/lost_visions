@@ -9,6 +9,12 @@ class TimeInstant():
         self.description = description
 
 
+def write_file(text):
+    with open('timekeeper.txt', 'a') as f1:
+        f1.writelines(line + '\n' for line in text)
+    f1.close()
+
+
 class TimeKeeper():
 
     def __init__(self):
@@ -19,27 +25,31 @@ class TimeKeeper():
         now = datetime.datetime.now()
         current_instant = TimeInstant(now, description)
 
+        text = []
+
         if print_out:
-            print '\n****************'
-            print 'Event : ' + description
-            print 'Time : ' + str(now.isoformat())
+            text.append('\n****************')
+            text.append('Event : {}'.format(description))
+            text.append('Time : {}'.format(str(now.isoformat())))
+
         if len(self.times) > 0:
             recent = self.times[-1]
             delta = current_instant.time - recent.time
 
             if print_out:
-                print 'Time delta : ' + str(delta.total_seconds())
+                text.append('Time delta : {}'.format(str(delta.total_seconds())))
 
                 start = self.times[0]
                 start_delta = current_instant.time - start.time
-                print 'Time since start : ' + str(start_delta.total_seconds())
-                print '****************\n'
+                text.append('Time since start : {}\n'.format(str(start_delta.total_seconds())))
+                text.append('****************\n')
+                write_file(text)
 
             self.times.append(current_instant)
             return delta.total_seconds()
         else:
             if print_out:
-                print '****************\n'
-
+                text.append('****************\n')
+                write_file(text)
             self.times.append(current_instant)
             return 0
