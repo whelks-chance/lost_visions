@@ -105,6 +105,8 @@ if rank == 0:
             folder_spread=True
         )
 
+        timekeeper.time_now('files found', True)
+
         for fi in files:
             f = files[fi]
 
@@ -142,7 +144,7 @@ if rank == 0:
     task_index2 = 0
     task2_finished_index = 0
 
-    timekeeper.time_now('Found files', True)
+    timekeeper.time_now('Created tasks', True)
 
     num_workers = size - 1
     closed_workers = 0
@@ -296,6 +298,8 @@ if rank == 0:
 
     if DO_TASKS['create_graphs']:
         create_graph(sorted_weights)
+
+    timekeeper.time_now('Final', True)
 else:
     # Worker processes execute code below
     s_print("I am a worker with rank {} on {}.".format(rank, name))
