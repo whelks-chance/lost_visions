@@ -47,8 +47,8 @@ def find_files(folders, max_files=100, filter_descriptors=None, output_path=None
 def walk_folder(folder, all_files, max_files, filter_descriptors=None,
                 output_folder=None, folder_count=None, base_path=None):
 
-    print 'Searching folder {}'.format(folder)
-    print('base folder {}'.format(base_path))
+    # print 'Searching folder {}'.format(folder)
+    # print('base folder {}'.format(base_path))
     found_count = 0
     for file_name in os.listdir(folder):
         a_file = os.path.join(folder, file_name)
@@ -83,10 +83,10 @@ def walk_folder(folder, all_files, max_files, filter_descriptors=None,
                     #
                     descriptor_path = os.path.join(new_path, 'desc' + descriptor['ext'])
 
-                    print 'File {}\nlooking for {}'.format(os.path.abspath(a_file), os.path.abspath(descriptor_path))
+                    # print 'File {}\nlooking for {}'.format(os.path.abspath(a_file), os.path.abspath(descriptor_path))
 
                     if os.path.isfile(descriptor_path):
-                        print 'found {} \n'.format(descriptor_path)
+                        # print 'found {} \n'.format(descriptor_path)
                     # if os.path.isfile(os.path.join(folder, (a_file + '.sift'))):
                         pass
 
