@@ -3,6 +3,7 @@ import pprint
 from time import sleep
 import itertools
 # from ORB_match import ShowStuff
+from LBP_Processor import LBP_Processor
 from ORB_processor import ORB_processor
 from SIFT_processor import SIFT_processor
 from TimeKeeper import TimeKeeper
@@ -62,6 +63,8 @@ def get_descriptor_processor(ext):
         return SIFT_processor()
     if ext in '.orb':
         return ORB_processor()
+    if ext in '.lbp':
+        return LBP_Processor()
 
 comm = MPI.COMM_WORLD
 size = MPI.COMM_WORLD.Get_size()
