@@ -8,7 +8,7 @@ from ORB_processor import ORB_processor
 from SIFT_processor import SIFT_processor
 from TimeKeeper import TimeKeeper
 from file_utils import find_files
-from graphs import create_graph
+from graphs import create_graph, graph_matches
 
 __author__ = 'lostvisions'
 
@@ -281,7 +281,8 @@ if rank == 0:
     print "Completed " + str(len(tasks)) + ' Tasks.'
     print "Completed " + str(len(tasks2)) + ' Matches.'
 
-    best_match = sorted_weights[-3:]
+    # [-3:]
+    best_match = sorted_weights
     for b in best_match:
         print '\n{}\n'.format(pprint.pformat(b, indent=1, width=80, depth=None))
 
@@ -301,6 +302,7 @@ if rank == 0:
 
     if DO_TASKS['create_graphs']:
         create_graph(sorted_weights)
+        graph_matches(sorted_weights)
 
     timekeeper.time_now('Final', True)
 else:
@@ -312,7 +314,7 @@ else:
         tag = status.Get_tag()
 
         if tag == tags['WAIT']:
-            sleep(1)
+            sleep(5)
             result = {'done_waiting': True}
             comm.send(result, dest=0, tag=tags['READY'])
 

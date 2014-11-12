@@ -98,20 +98,20 @@ for filename in image_hists:
     hist = image_hists[filename][0]
     transformed_img = image_hists[filename][3]
 
-    # cv2.imshow('image', image_hists[filename][2])
-    # cv2.imshow('thresholded image', transformed_img)
+    cv2.imshow('image', image_hists[filename][2])
+    cv2.imshow('thresholded image', transformed_img)
 
     cdf = hist.cumsum()
     cdf_normalized = cdf * hist.max() / cdf.max()
 
-    # plt.plot(cdf_normalized, color='b')
-    #
-    # # TODO sort out this 256 or 254 issue
-    # plt.hist(transformed_img.flatten(), 256, [1, 254], color='r')
-    # plt.xlim([0, 256])
-    #
-    # plt.legend(('cdf', 'histogram'), loc='upper left')
-    # plt.show()
+    plt.plot(cdf_normalized, color='b')
+
+    # TODO sort out this 256 or 254 issue
+    plt.hist(transformed_img.flatten(), 256, [1, 254], color='r')
+    plt.xlim([0, 256])
+
+    plt.legend(('cdf', 'histogram'), loc='upper left')
+    plt.show()
 
 for pair in itertools.combinations(image_hists, 2):
     print pair
@@ -137,7 +137,7 @@ for pair in itertools.combinations(image_hists, 2):
 
         val = cv2.compareHist(hist1, hist2, method[1])
 
-        print ('Comp method {} gives value : {}'.format(method[0], val))
+        print ('Comp method {}:{} gives value : {}'.format(method[0], method[1], val))
     print '\n'
 
 cv2.waitKey(0)
