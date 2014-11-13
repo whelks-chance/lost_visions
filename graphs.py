@@ -29,15 +29,46 @@ __author__ = 'ubuntu'
 # # and you can confirm that introspection by drawing & printing this graph:
 # G.draw('somefilename.png', format='png', prog='neato')
 
+def get_best_worst(plt, sorted_weights, offset = 0):
+
+    f, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2,2)
+
+    image1 = plt.imread(sorted_weights[0 + offset]['img_a'])
+    image2 = plt.imread(sorted_weights[0 + offset]['img_b'])
+
+    image3 = plt.imread(sorted_weights[-1 - offset]['img_a'])
+    image4 = plt.imread(sorted_weights[-1 - offset]['img_b'])
+
+    ax1.imshow(image1)
+    ax1.axis('off')
+    ax1.set_title(sorted_weights[0]['weight'])
+    ax2.imshow(image2)
+    ax2.axis('off')
+
+    ax3.imshow(image3)
+    ax3.set_title(sorted_weights[-1]['weight'])
+    ax3.axis('off')
+
+    ax4.imshow(image4)
+    ax4.axis('off')
+
+    return plt
 
 def graph_matches(sorted_weights):
 
     # print pprint.pformat(sorted_weights)
 
+    print sorted_weights[0]
+    print sorted_weights[-1]
+
     import matplotlib
     matplotlib.use('qt4agg')
     from matplotlib import pyplot as plt
     import numpy as np
+
+    for a in range(0, 5):
+        plt = get_best_worst(plt, sorted_weights, a)
+        plt.show()
 
     ax = plt.gca()
 
@@ -73,9 +104,9 @@ def graph_matches(sorted_weights):
             else:
                 weight -= 0
 
-            print '{} {} : {}'.format(img1, img2, weight)
-            line.append(math.sqrt(weight))
-            # line.append(weight)
+            print '{} {}: {}'.format(img1, img2, weight)
+            # line.append(math.log(1 / (1 - weight)))
+            line.append(weight)
 
         matrix.append(line)
 
@@ -87,8 +118,8 @@ def graph_matches(sorted_weights):
 
     ax.patch.set_facecolor('gray')
     ax.set_aspect('equal', 'box')
-    # ax.xaxis.set_major_locator(plt.NullLocator())
-    # ax.yaxis.set_major_locator(plt.NullLocator())
+    ax.xaxis.set_major_locator(plt.NullLocator())
+    ax.yaxis.set_major_locator(plt.NullLocator())
 
     for (x, y), w in np.ndenumerate(matrix):
         color = 'white' if w > 0 else 'black'
@@ -97,17 +128,16 @@ def graph_matches(sorted_weights):
                              facecolor=color, edgecolor=color)
         ax.add_patch(rect)
 
-    ax.set_xticklabels(list(name_set), rotation=90)
-    ax.set_yticklabels(list(name_set))
+    # ax.set_xticklabels(list(name_set), rotation=90)
+    # ax.set_yticklabels(list(name_set))
 
     # ax.spines['left'].set_position(('outward', 10))
     # ax.spines['bottom'].set_position(('outward', 10))
 
     ax.autoscale_view()
     ax.invert_yaxis()
-    plt.axis([0, len(name_list), 0, len(name_list)])
+    # plt.axis([0, len(name_list), 0, len(name_list)])
     plt.show()
-
 
 def create_graph(matches):
 

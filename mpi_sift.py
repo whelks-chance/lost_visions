@@ -314,7 +314,7 @@ else:
         tag = status.Get_tag()
 
         if tag == tags['WAIT']:
-            sleep(5)
+            sleep(10)
             result = {'done_waiting': True}
             comm.send(result, dest=0, tag=tags['READY'])
 
