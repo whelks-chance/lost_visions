@@ -3,6 +3,8 @@ import pprint
 from time import sleep
 import itertools
 # from ORB_match import ShowStuff
+import datetime
+from DatabaseAccessor import save_to_db
 from LBP_Processor import LBP_Processor
 from ORB_processor import ORB_processor
 from SIFT_processor import SIFT_processor
@@ -118,7 +120,7 @@ if rank == 0:
 
                     # TODO yeah....
                     rel_path = os.path.relpath(f, os.path.join(parent_path, '..'))
-            # root_dir = os.path.dirname(os.path.realpath(f))
+                    # root_dir = os.path.dirname(os.path.realpath(f))
                     new_path = os.path.join(OUTPUT_PATH, rel_path)
             try:
                 os.makedirs(new_path)
@@ -227,11 +229,11 @@ if rank == 0:
 
             if results['success']:
                 # if 'descriptor_path' in results:
-                    # print '*-*-*' + str(results['descriptor_path'])
-                    # descriptor_paths.append({
-                    #     'descriptor_path': results['descriptor_path'],
-                    #     'descriptor': results['descriptor']
-                    # })
+                # print '*-*-*' + str(results['descriptor_path'])
+                # descriptor_paths.append({
+                #     'descriptor_path': results['descriptor_path'],
+                #     'descriptor': results['descriptor']
+                # })
                 if not results['descriptor'] in descriptor_paths:
                     descriptor_paths[results['descriptor']] = []
                 descriptor_paths.get(results['descriptor']).append({
@@ -253,16 +255,19 @@ if rank == 0:
 
             task2_finished_index += 1
 
-            weight = {
-                'descriptor': results['descriptor'],
-                'img_a': results['img_path_1'],
-                'img_b': results['img_path_2'],
-                'descriptor_1': results['descriptor_1'],
-                'descriptor_2': results['descriptor_2'],
-                'weight': results['matches']
-            }
+            for result in results:
+                weight = {
+                    'descriptor': result['descriptor'],
+                    'img_a': result['img_path_1'],
+                    'img_b': result['img_path_2'],
+                    'descriptor_1': result['descriptor_1'],
+                    'descriptor_2': result['descriptor_2'],
+                    'weight': result['matches']
+                }
+                if 'match_settings' in result:
+                    weight['match_settings'] = result['match_settings']
 
-            weights.append(weight)
+                weights.append(weight)
 
         elif tag == tags['EXIT']:
             # print("Worker {} exited.".format(source))
@@ -290,19 +295,25 @@ if rank == 0:
         # ss = ShowStuff()
         # ss.show_ORB(b['img_a'].replace('.sift', ''), b['img_b'].replace('.sift', ''))
 
+    timestamp = datetime.datetime.utcnow().isoformat()
     if DO_TASKS['save_descriptor_paths']:
-        with open('descriptor_paths.txt', 'wb') as f1:
+        descriptor_filename = 'runs/descriptor_paths_' + timestamp + '.txt'
+        with open(descriptor_filename, 'wb') as f1:
             f1.write(pprint.pformat(descriptor_paths, indent=1, width=80, depth=None))
         f1.close()
 
     if DO_TASKS['save_matches']:
-        with open('matches_data.txt', 'wb') as f2:
+        matches_filename = 'runs/matches_data_' + timestamp + '.txt'
+        with open(matches_filename, 'wb') as f2:
             f2.write(pprint.pformat(sorted_weights, indent=1, width=80, depth=None))
         f2.close()
 
     if DO_TASKS['create_graphs']:
         create_graph(sorted_weights)
         graph_matches(sorted_weights)
+
+    if DO_TASKS['save_to_db']:
+        save_to_db(sorted_weights)
 
     timekeeper.time_now('Final', True)
 else:
@@ -322,8 +333,8 @@ else:
 
             desc_proc = get_descriptor_processor(task['descriptor'])
             creation_response = desc_proc.touch_descriptor(task['img_path'],
-                                             detector_ext=task['descriptor'],
-                                             output_path=task['output_path'])
+                                                           detector_ext=task['descriptor'],
+                                                           output_path=task['output_path'])
             # had_to_create = False
             print "\nWorker {} performed task1 job here :\n {}\n".format(rank,
                                                                          pprint.pformat(
@@ -347,17 +358,37 @@ else:
             desc_proc = get_descriptor_processor(task['descriptor'])
 
             matches = desc_proc.compare_descriptors(task['d1']['descriptor_path'], task['d2']['descriptor_path'], 1.5)
-            result = {
-                'task_no': 2,
-                'descriptor': task['descriptor'],
-                'img_path_1': task['d1']['image'],
-                'img_path_2': task['d2']['image'],
-                'descriptor_1': task['d1']['descriptor_path'],
-                'descriptor_2': task['d2']['descriptor_path'],
-                'did_task_2': True,
-                'matches': matches
-            }
-            comm.send(result, dest=0, tag=tags['DONE_2'])
+
+            all_results = []
+
+            if type(matches) is list:
+
+                for match_details in matches:
+                    all_results.append({
+                        'task_no': 2,
+                        'descriptor': task['descriptor'],
+                        'img_path_1': task['d1']['image'],
+                        'img_path_2': task['d2']['image'],
+                        'descriptor_1': task['d1']['descriptor_path'],
+                        'descriptor_2': task['d2']['descriptor_path'],
+                        'did_task_2': True,
+                        'matches': match_details['metric_value'],
+                        'match_settings': match_details['metric_name']
+                    })
+            else:
+
+                result = {
+                    'task_no': 2,
+                    'descriptor': task['descriptor'],
+                    'img_path_1': task['d1']['image'],
+                    'img_path_2': task['d2']['image'],
+                    'descriptor_1': task['d1']['descriptor_path'],
+                    'descriptor_2': task['d2']['descriptor_path'],
+                    'did_task_2': True,
+                    'matches': matches
+                }
+                all_results.append(result)
+            comm.send(all_results, dest=0, tag=tags['DONE_2'])
 
         elif tag == tags['EXIT']:
             # print('leaving worker loop')

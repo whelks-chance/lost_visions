@@ -1,8 +1,9 @@
+import ast
 from graphs import graph_matches
 
 __author__ = 'ubuntu'
 
-json = [
+json0 = [
 {'descriptor': '.lbp',
  'descriptor_1': '/scratch/lost-visions/descriptors/portrait_large/11126024515_f7ba791926_o.jpg/desc.lbp',
  'descriptor_2': '/scratch/lost-visions/descriptors/portrait_large/10999518716_2fa45e59af_o.jpg/desc.lbp',
@@ -8975,6 +8976,6 @@ json2 = [
  'weight': 0.999898788298764},
 ]
 
-
-
-graph_matches(json2)
+with open('matches_data_2014-11-14T00:07:19.030603.txt', 'rb') as f1:
+    data = ast.literal_eval(f1.read())
+    graph_matches(data)

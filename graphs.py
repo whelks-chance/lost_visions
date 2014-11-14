@@ -41,15 +41,29 @@ def get_best_worst(plt, sorted_weights, offset = 0):
 
     ax1.imshow(image1)
     ax1.axis('off')
-    ax1.set_title(sorted_weights[0]['weight'])
+
+    a = sorted_weights[0 + offset]['img_a'].split('/')[-1].split('_')[0]
+    w1 = sorted_weights[0 + offset]['weight']
+    ax1.set_title('[' + str(w1) + ']\n' + a)
+
+
     ax2.imshow(image2)
+    b = sorted_weights[0 + offset]['img_b'].split('/')[-1].split('_')[0]
+    ax2.set_title(b)
+
     ax2.axis('off')
 
     ax3.imshow(image3)
-    ax3.set_title(sorted_weights[-1]['weight'])
+    a2 = sorted_weights[-1 - offset]['img_a'].split('/')[-1].split('_')[0]
+    w2 = sorted_weights[-1 - offset]['weight']
+
+    ax3.set_title('[' + str(w2) + ']\n' + a2)
     ax3.axis('off')
 
     ax4.imshow(image4)
+    b2 = sorted_weights[-1 - offset]['img_b'].split('/')[-1].split('_')[0]
+    ax4.set_title(b2)
+
     ax4.axis('off')
 
     return plt

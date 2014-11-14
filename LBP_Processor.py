@@ -1,3 +1,4 @@
+import pprint
 from DescriptorBase import DescriptorBase, DescriptorCreationResponse
 import os
 import cPickle
@@ -19,6 +20,14 @@ class LBP_Processor(DescriptorBase):
     def __init__(self):
         DescriptorBase.__init__(self)
         self.name = 'Local Binary Pattern descriptor processor'
+        self.settings = {
+            'metrics': [
+                ['CV_COMP_BHATTACHARYYA', 3],
+                ['CV_COMP_CHISQR', 1],
+                ['CV_COMP_CORREL', 0],
+                ['CV_COMP_INTERSECT', 2]
+            ]
+        }
 
     # Return True if had to write file, False if already exists
     def touch_descriptor(self, img_path, detector_ext=None, output_path=None):
@@ -41,7 +50,7 @@ class LBP_Processor(DescriptorBase):
                 transformed_img = cv2.imread(img_path, 0)
 
                 lbp_img = self.calculate_lbp(img, transformed_img)
-                
+
                 with open(descriptor_path, 'wb') as f:
                     cPickle.dump(lbp_img, f, protocol=cPickle.HIGHEST_PROTOCOL)
                 f.close()
@@ -64,7 +73,17 @@ class LBP_Processor(DescriptorBase):
                 lbp_img2 = cPickle.load(f2)
                 hist2 = cv2.calcHist([lbp_img2.flatten()], [0], None, [256], [0, 256])
 
-            return cv2.compareHist(hist1, hist2, 0)
+            return_matches = []
+            for metric in self.settings['metrics']:
+                return_matches.append(
+                    {
+                        'metric_name': metric[0],
+                        'metric_value': cv2.compareHist(hist1, hist2, metric[1])
+                    }
+                )
+            print pprint.pformat(return_matches)
+            return return_matches
+            # return cv2.compareHist(hist1, hist2, 0)
 
         else:
             return 0
@@ -105,15 +124,15 @@ class LBP_Processor(DescriptorBase):
             else:
                 out.append(0)
         return out
-    
+
     def get_pixel_else_0(self, l, idx, idy, default=0):
         try:
             return l[idx,idy]
         except IndexError:
             return default
-    
+
     def calculate_lbp(self, img, transformed_img):
-    
+
         for x in range(0, len(img)):
             for y in range(0, len(img[0])):
                 center        = img[x,y]
@@ -125,17 +144,17 @@ class LBP_Processor(DescriptorBase):
                 bottom_left   = self.get_pixel_else_0(img, x-1, y+1)
                 bottom_right  = self.get_pixel_else_0(img, x+1, y+1)
                 bottom_down   = self.get_pixel_else_0(img, x,   y+1 )
-    
+
                 values = self.thresholded(center, [top_left, top_up, top_right, right, bottom_right,
-                                              bottom_down, bottom_left, left])
-    
+                                                   bottom_down, bottom_left, left])
+
                 weights = [1, 2, 4, 8, 16, 32, 64, 128]
                 res = 0
                 for a in range(0, len(values)):
                     res += weights[a] * values[a]
-    
+
                 transformed_img.itemset((x,y), res)
-    
+
         return transformed_img
         # print x
 
