@@ -4,7 +4,7 @@ from time import sleep
 import itertools
 # from ORB_match import ShowStuff
 import datetime
-from DatabaseAccessor import save_to_db
+from DatabaseAccessor import save_weights_to_db, save_descriptor_path_to_db
 from LBP_Processor import LBP_Processor
 from ORB_processor import ORB_processor
 from SIFT_processor import SIFT_processor
@@ -102,10 +102,16 @@ if rank == 0:
     # TODO come back and add this in
 
     if DO_TASKS['find_files']:
+
+        if DO_FILTER_DESCRIPTORS:
+            filtered = DESCRIPTORS
+        else:
+            filtered = None
+
         files = find_files(
             IMAGE_LOCATIONS,
             max_files=MAX_FILES,
-            filter_descriptors=DESCRIPTORS,
+            filter_descriptors=filtered,
             output_path=OUTPUT_PATH,
             folder_spread=True
         )
@@ -228,6 +234,9 @@ if rank == 0:
             )))
 
             if results['success']:
+                if DO_TASKS['save_descriptor_paths_to_db']:
+                    save_descriptor_path_to_db(results)
+
                 # if 'descriptor_path' in results:
                 # print '*-*-*' + str(results['descriptor_path'])
                 # descriptor_paths.append({
@@ -313,7 +322,7 @@ if rank == 0:
         graph_matches(sorted_weights)
 
     if DO_TASKS['save_to_db']:
-        save_to_db(sorted_weights)
+        save_weights_to_db(sorted_weights)
 
     timekeeper.time_now('Final', True)
 else:
@@ -335,7 +344,7 @@ else:
             creation_response = desc_proc.touch_descriptor(task['img_path'],
                                                            detector_ext=task['descriptor'],
                                                            output_path=task['output_path'])
-            # had_to_create = False
+            #  had_to_create = False
             print "\nWorker {} performed task1 job here :\n {}\n".format(rank,
                                                                          pprint.pformat(
                                                                              task, indent=1, width=80, depth=None

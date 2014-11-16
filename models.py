@@ -1,5 +1,4 @@
 # coding: utf-8
-import datetime
 from sqlalchemy import Boolean, Column, DateTime, Float, ForeignKey, Integer, String, Text, text
 from sqlalchemy.orm import relationship
 from sqlalchemy.ext.declarative import declarative_base
@@ -221,6 +220,23 @@ class LostVisionsCategory(Base):
     term = Column(String(256), nullable=False)
 
 
+class LostVisionsDescriptorlocation(Base):
+    __tablename__ = 'lost_visions_descriptorlocation'
+
+    id = Column(Integer, primary_key=True)
+    location = Column(Text, nullable=False)
+    image_id = Column(ForeignKey(u'image.id'), index=True)
+    book_id = Column(Text, nullable=False)
+    volume = Column(Text, nullable=False)
+    page = Column(Text, nullable=False)
+    idx = Column(Text, nullable=False)
+    descriptor_type = Column(Text, nullable=False)
+    descriptor_settings = Column(Text, nullable=False)
+    timestamp = Column(DateTime)
+
+    image = relationship(u'Image')
+
+
 class LostVisionsExpertlevel(Base):
     __tablename__ = 'lost_visions_expertlevel'
 
@@ -340,7 +356,7 @@ class LostVisionsMachinematching(Base):
     metric = Column(Text, nullable=False)
     metric_data = Column(Text, nullable=False)
     execution_run = Column(Integer, nullable=False)
-    timestamp = Column(DateTime, default=datetime.datetime.utcnow)
+    timestamp = Column(DateTime)
 
     image_a = relationship(u'Image', primaryjoin='LostVisionsMachinematching.image_a_id == Image.id')
     image_b = relationship(u'Image', primaryjoin='LostVisionsMachinematching.image_b_id == Image.id')

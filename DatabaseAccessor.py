@@ -16,8 +16,15 @@ __author__ = 'ubuntu'
 #   'weight': 0.9844214439492431}
 
 
-def save_to_db(weights):
-    engine = create_engine('sqlite:////home/ubuntu/PycharmProjects/Lost-Visions/db.sqlite3')
+def save_descriptor_path_to_db(descriptor_data):
+    pass
+
+def save_weights_to_db(weights):
+    # engine = create_engine('sqlite:////home/ubuntu/PycharmProjects/Lost-Visions/db.sqlite3')
+
+    engine = create_engine('postgresql://local_user:l0c4l111@localhost:5432/local_db')
+
+
     # Bind the engine to the metadata of the Base class so that the
     # declaratives can be accessed through a DBSession instance
     Base.metadata.bind = engine
@@ -34,7 +41,8 @@ def save_to_db(weights):
 
     for match in weights:
         machine_match = LostVisionsMachinematching()
-        machine_match.metric = match['match_settings']
+        machine_match.metric = match.get('match_settings', '')
+
         machine_match.metric_value = match['weight']
         machine_match.metric_data = pprint.pformat(match)
         machine_match.execution_run = datetime.datetime.utcnow().isoformat()
@@ -42,14 +50,27 @@ def save_to_db(weights):
         image_a_id = match['img_a'].split('/')[-1].split('_')[0]
         image_b_id = match['img_b'].split('/')[-1].split('_')[0]
 
-        machine_match.image_a_flickr_id = image_a_id
-        machine_match.image_b_flickr_id = image_b_id
+        # Flip it so that image a has the lower flickr id
+        # Not enforced, but handy convention.
+        if int(image_a_id) < int(image_b_id):
 
-        # image_a = session.query(Image).filter(Image.flickr_id==image_a_id).one()
-        # image_b = session.query(Image).filter(Image.flickr_id==image_b_id).one()
+            machine_match.image_a_flickr_id = image_a_id
+            machine_match.image_b_flickr_id = image_b_id
 
-        image_a = session.query(Image).filter(Image.id == 1).one()
-        image_b = session.query(Image).filter(Image.id == 2).one()
+            image_a = session.query(Image).filter(Image.id == 1).one()
+            image_b = session.query(Image).filter(Image.id == 2).one()
+
+            # image_a = session.query(Image).filter(Image.flickr_id==image_a_id).one()
+            # image_b = session.query(Image).filter(Image.flickr_id==image_b_id).one()
+        else:
+            machine_match.image_a_flickr_id = image_b_id
+            machine_match.image_b_flickr_id = image_a_id
+
+            image_a = session.query(Image).filter(Image.id == 1).one()
+            image_b = session.query(Image).filter(Image.id == 2).one()
+
+            # image_a = session.query(Image).filter(Image.flickr_id==image_a_id).one()
+            # image_b = session.query(Image).filter(Image.flickr_id==image_b_id).one()
 
         if image_a and image_b:
 

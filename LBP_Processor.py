@@ -81,7 +81,7 @@ class LBP_Processor(DescriptorBase):
                         'metric_value': cv2.compareHist(hist1, hist2, metric[1])
                     }
                 )
-            print pprint.pformat(return_matches)
+            # print pprint.pformat(return_matches)
             return return_matches
             # return cv2.compareHist(hist1, hist2, 0)
 
