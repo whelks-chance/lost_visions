@@ -2,9 +2,34 @@ import pprint
 import datetime
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from models import Base, LostVisionsMachinematching, Image
+from models import Base, LostVisionsMachinematching, Image, LostVisionsDescriptorlocation
 
 __author__ = 'ubuntu'
+
+
+
+
+def save_descriptor_path_to_db(descriptor_data):
+    engine = create_engine('sqlite:////home/ubuntu/PycharmProjects/Lost-Visions/db.sqlite3')
+    # engine = create_engine('postgresql://local_user:l0c4l111@localhost:5432/local_db')
+
+    Base.metadata.bind = engine
+    DBSession = sessionmaker(bind=engine)
+    session = DBSession()
+
+    found_image = session.query(Image).filter(Image.flickr_id == descriptor_data['img_id']).one()
+
+    print found_image
+
+    descriptor_location_model = LostVisionsDescriptorlocation()
+    descriptor_location_model.image = found_image
+    descriptor_location_model.location = descriptor_data['descriptor_path']
+    descriptor_location_model.descriptor_type = descriptor_data['descriptor']
+    descriptor_location_model.descriptor_settings = pprint.pformat(descriptor_data)
+
+    session.add(descriptor_location_model)
+
+    session.commit()
 
 
 # {'descriptor': '.lbp',
@@ -14,10 +39,6 @@ __author__ = 'ubuntu'
 #   'img_b': './maps/11249985415_a18fd70e66_o.jpg',
 #   'match_settings': 'CV_COMP_CORREL',
 #   'weight': 0.9844214439492431}
-
-
-def save_descriptor_path_to_db(descriptor_data):
-    pass
 
 def save_weights_to_db(weights):
     # engine = create_engine('sqlite:////home/ubuntu/PycharmProjects/Lost-Visions/db.sqlite3')
@@ -78,4 +99,4 @@ def save_weights_to_db(weights):
             machine_match.image_b = image_b
 
         session.add(machine_match)
-        session.commit()
+    session.commit()

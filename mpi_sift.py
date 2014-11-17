@@ -229,7 +229,7 @@ if rank == 0:
 
         elif tag == tags['DONE']:
             results = data
-            print("Got data from worker {} : {}\n".format(source, pprint.pformat(
+            print("Got task1 data from worker {} :\n{}\n".format(source, pprint.pformat(
                 results, indent=1, width=80, depth=None
             )))
 
@@ -353,6 +353,7 @@ else:
                 'task_no': 1,
                 'processing_class': desc_proc.name,
                 'img_path': task['img_path'],
+                'img_id': task['img_path'].split('/')[-1].split('_')[0],
                 'had_to_create': creation_response.had_to_create,
                 'descriptor': task['descriptor'],
                 'descriptor_path': creation_response.descriptor_path,
