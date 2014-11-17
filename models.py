@@ -412,13 +412,6 @@ class LostVisionsTag(Base):
     user = relationship(u'LostVisionsLostvisionuser')
 
 
-class LostVisionsTag(Base):
-    __tablename__ = 'lost_visions_tags'
-
-    id = Column(Integer, primary_key=True)
-    tag = Column(String(256), nullable=False)
-
-
 class LostVisionsUserinterest(Base):
     __tablename__ = 'lost_visions_userinterests'
 

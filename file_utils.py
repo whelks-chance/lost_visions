@@ -1,6 +1,10 @@
 import os
 import math
 import pprint
+import errno
+import urllib
+from urllib2 import URLError
+import requests
 
 __author__ = 'lostvisions'
 
@@ -109,4 +113,28 @@ def walk_folder(folder, all_files, max_files, filter_descriptors=None,
                                     output_folder=output_folder,
                                     base_path=base_path)
     return all_files
+
+
+def downloadImage(image_url, download_folder=None):
+    filename = image_url.rsplit('/', 1)[1]
+    if download_folder is not None:
+        try:
+            os.makedirs(download_folder)
+        except OSError, exc:
+            if exc.errno != errno.EEXIST:
+                raise
+
+        filename = os.path.join(download_folder, filename)
+
+    if not os.path.exists(filename):
+        r = requests.get(image_url, stream=True)
+        if r.status_code == requests.codes.ok:
+            print ('Fetching {} \n{}\n'.format(image_url, filename))
+            with open(filename, 'wb') as fd:
+                for chunk in r.iter_content():
+                    fd.write(chunk)
+        else:
+            raise Exception
+    return filename
+
 

@@ -4,7 +4,7 @@ from time import sleep
 import itertools
 # from ORB_match import ShowStuff
 import datetime
-from DatabaseAccessor import save_weights_to_db, save_descriptor_path_to_db
+from DatabaseAccessor import save_weights_to_db, save_descriptor_path_to_db, find_files_from_db, DatabaseAccessor
 from LBP_Processor import LBP_Processor
 from ORB_processor import ORB_processor
 from SIFT_processor import SIFT_processor
@@ -93,6 +93,8 @@ if rank == 0:
     timekeeper = TimeKeeper()
     timekeeper.time_now('start', True)
 
+    session = DatabaseAccessor().session
+
     files = []
     tasks = []
     # Master process executes code below
@@ -108,13 +110,20 @@ if rank == 0:
         else:
             filtered = None
 
-        files = find_files(
-            IMAGE_LOCATIONS,
-            max_files=MAX_FILES,
-            filter_descriptors=filtered,
-            output_path=OUTPUT_PATH,
-            folder_spread=True
+        # files = find_files(
+        #     IMAGE_LOCATIONS,
+        #     max_files=MAX_FILES,
+        #     filter_descriptors=filtered,
+        #     output_path=OUTPUT_PATH,
+        #     folder_spread=True
+        # )
+
+        files = find_files_from_db(
+            max_files=MAX_FILES, session=session
         )
+
+        print pprint.pformat(files, indent=1, width=80, depth=None)
+
 
         timekeeper.time_now('files found', True)
 
@@ -128,6 +137,8 @@ if rank == 0:
                     rel_path = os.path.relpath(f, os.path.join(parent_path, '..'))
                     # root_dir = os.path.dirname(os.path.realpath(f))
                     new_path = os.path.join(OUTPUT_PATH, rel_path)
+
+                    print new_path
             try:
                 os.makedirs(new_path)
             except:
@@ -137,6 +148,7 @@ if rank == 0:
                 for desc in DESCRIPTORS:
                     tasks.append({
                         'img_path': f,
+                        'image_id': fi,
                         'descriptor': desc['ext'],
                         'output_path': new_path
                     })
@@ -235,7 +247,7 @@ if rank == 0:
 
             if results['success']:
                 if DO_TASKS['save_descriptor_paths_to_db']:
-                    save_descriptor_path_to_db(results)
+                    save_descriptor_path_to_db(results, session)
 
                 # if 'descriptor_path' in results:
                 # print '*-*-*' + str(results['descriptor_path'])
@@ -247,7 +259,8 @@ if rank == 0:
                     descriptor_paths[results['descriptor']] = []
                 descriptor_paths.get(results['descriptor']).append({
                     'descriptor_path': results['descriptor_path'],
-                    'image': results['img_path']
+                    'image': results['img_path'],
+                    'image_id': results['img_id']
                 })
 
                 # print pprint.pformat(descriptor_paths, indent=1, width=80, depth=None)
@@ -269,6 +282,8 @@ if rank == 0:
                     'descriptor': result['descriptor'],
                     'img_a': result['img_path_1'],
                     'img_b': result['img_path_2'],
+                    'img_a_id': result['image_id_1'],
+                    'img_b_id': result['image_id_2'],
                     'descriptor_1': result['descriptor_1'],
                     'descriptor_2': result['descriptor_2'],
                     'weight': result['matches']
@@ -322,7 +337,7 @@ if rank == 0:
         graph_matches(sorted_weights)
 
     if DO_TASKS['save_to_db']:
-        save_weights_to_db(sorted_weights)
+        save_weights_to_db(sorted_weights, session)
 
     timekeeper.time_now('Final', True)
 else:
@@ -353,7 +368,7 @@ else:
                 'task_no': 1,
                 'processing_class': desc_proc.name,
                 'img_path': task['img_path'],
-                'img_id': task['img_path'].split('/')[-1].split('_')[0],
+                'img_id': task['image_id'],
                 'had_to_create': creation_response.had_to_create,
                 'descriptor': task['descriptor'],
                 'descriptor_path': creation_response.descriptor_path,
@@ -378,7 +393,9 @@ else:
                         'task_no': 2,
                         'descriptor': task['descriptor'],
                         'img_path_1': task['d1']['image'],
+                        'image_id_1': task['d1']['image_id'],
                         'img_path_2': task['d2']['image'],
+                        'image_id_2': task['d2']['image_id'],
                         'descriptor_1': task['d1']['descriptor_path'],
                         'descriptor_2': task['d2']['descriptor_path'],
                         'did_task_2': True,
@@ -391,7 +408,9 @@ else:
                     'task_no': 2,
                     'descriptor': task['descriptor'],
                     'img_path_1': task['d1']['image'],
+                    'image_id_1': task['d1']['image_id'],
                     'img_path_2': task['d2']['image'],
+                    'image_id_2': task['d2']['image_id'],
                     'descriptor_1': task['d1']['descriptor_path'],
                     'descriptor_2': task['d2']['descriptor_path'],
                     'did_task_2': True,
