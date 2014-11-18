@@ -122,6 +122,7 @@ def save_descriptor_path_to_db(descriptor_data, session=None):
 
     descriptor_location_model = LostVisionsDescriptorlocation()
     descriptor_location_model.image = found_image
+    descriptor_location_model.timestamp = datetime.datetime.utcnow()
 
     descriptor_location_model.book_id = found_image.book_identifier
     descriptor_location_model.volume = found_image.volume

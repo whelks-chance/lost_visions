@@ -122,6 +122,9 @@ if rank == 0:
             max_files=MAX_FILES, session=session
         )
 
+        files['11122166704'] = '/scratch/lost-visions/images-found/embellishments/1891/' \
+                               '003871282_0_000015_1_1891_embellishments.jpg'
+
         print pprint.pformat(files, indent=1, width=80, depth=None)
 
 
