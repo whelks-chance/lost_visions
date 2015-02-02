@@ -1,5 +1,6 @@
 from os import listdir
 from os.path import isfile, join, splitext, abspath
+import pprint
 import struct
 
 __author__ = 'ubuntu'
@@ -44,9 +45,11 @@ class BLYreader():
                 print abspath(join(self.dir_path, bly))
 
                 with open(abspath(join(self.dir_path, bly))) as f1:
-                    ba = bytearray(f1.readline())
+                    ba = bytearray(f1.read())
 
-                    self.read_bly_line_bytearray(ba)
+                    img_data_dict = self.read_bly_line_bytearray(ba)
+
+                    print pprint.pformat(img_data_dict)
 
             except Exception as e1:
                 print e1
@@ -55,21 +58,19 @@ class BLYreader():
     def read_bly_line_bytearray(self, ba):
 
         # How long is our line/ bytearray?
-        print len(ba)
+        file_length = len(ba)
 
         # Get version
-        version, ba = self.slice_bytearray(ba, 4)
-        print self.byte_to_uint(version)
+        version_bytes, ba = self.slice_bytearray(ba, 4)
+        version = self.byte_to_uint(version_bytes)
 
         # Get image file url length
-        img_path_len, ba = self.slice_bytearray(ba, 2)
-        img_path_len_int = self.byte_to_ushort(img_path_len)
-        print img_path_len_int
+        img_path_len_bytes, ba = self.slice_bytearray(ba, 2)
+        img_path_len_int = self.byte_to_ushort(img_path_len_bytes)
 
         # Get image url
         path_bytes, ba = self.slice_bytearray(ba, img_path_len_int)
         url_path = self.byte_arr_to_string(path_bytes, img_path_len_int)
-        print url_path
 
         # Get tag list length
         tag_len, ba = self.slice_bytearray(ba, 2)
@@ -82,22 +83,110 @@ class BLYreader():
         # It's a TSV list, so split by \t
         tags = tag_tsv.split('\t')
 
-        print tags
-
          # Get normalised parameter list length, probably 127
         norm_param_len, ba = self.slice_bytearray(ba, 4)
         norm_param_len_int = self.byte_to_uint(norm_param_len)
 
         print norm_param_len_int
 
+        norm_params = []
         for par_num in range(0, norm_param_len_int):
             # Get normalised parameter list
             norm_param_bytes, ba = self.slice_bytearray(ba, 8)
             norm_param = self.byte_to_double(norm_param_bytes)
 
-            print norm_param
+            norm_params.append(norm_param)
+
+        # Get parameter list length, probably 127
+        param_len, ba = self.slice_bytearray(ba, 4)
+        param_len_int = self.byte_to_uint(param_len)
+
+        print param_len_int
+
+        params = []
+        for par_num in range(0, param_len_int):
+            # Get parameter list
+            param_bytes, ba = self.slice_bytearray(ba, 8)
+            param = self.byte_to_double(param_bytes)
+
+            params.append(param)
+
+        #  Count of unique colours
+        count_colours, ba = self.slice_bytearray(ba, 4)
+        count_colours_int = self.byte_to_uint(count_colours)
+
+        #  RGB
+        red_bytes, ba = self.slice_bytearray(ba, 8)
+        red = self.byte_to_double(red_bytes)
+
+        green_bytes, ba = self.slice_bytearray(ba, 8)
+        green = self.byte_to_double(green_bytes)
+
+        blue_bytes, ba = self.slice_bytearray(ba, 8)
+        blue = self.byte_to_double(blue_bytes)
+
+        # Not sure what data is stored in here
+        # Appears to be 96 bytes
+        remains = ba
+
+        # blue_bytes, ba = self.slice_bytearray(ba, 8)
+        # blue1 = self.byte_to_double(blue_bytes)
+        # print blue1
+        # blue_bytes, ba = self.slice_bytearray(ba, 8)
+        # blue2 = self.byte_to_double(blue_bytes)
+        # print blue2
+        # blue_bytes, ba = self.slice_bytearray(ba, 8)
+        # blue3 = self.byte_to_double(blue_bytes)
+        # print blue3
+        # blue_bytes, ba = self.slice_bytearray(ba, 8)
+        # blue4 = self.byte_to_double(blue_bytes)
+        # print blue4
+        # blue_bytes, ba = self.slice_bytearray(ba, 8)
+        # blue5 = self.byte_to_double(blue_bytes)
+        # print blue5
+        # blue_bytes, ba = self.slice_bytearray(ba, 8)
+        # blue6 = self.byte_to_double(blue_bytes)
+        # print blue6
+        # blue_bytes, ba = self.slice_bytearray(ba, 8)
+        # blue7 = self.byte_to_double(blue_bytes)
+        # print blue7
+        # blue_bytes, ba = self.slice_bytearray(ba, 8)
+        # blue8 = self.byte_to_double(blue_bytes)
+        # print blue8
+        # blue_bytes, ba = self.slice_bytearray(ba, 8)
+        # blue9 = self.byte_to_double(blue_bytes)
+        # print blue9
+        # blue_bytes, ba = self.slice_bytearray(ba, 8)
+        # blue10 = self.byte_to_double(blue_bytes)
+        # print blue10
+        # blue_bytes, ba = self.slice_bytearray(ba, 8)
+        # blue11 = self.byte_to_double(blue_bytes)
+        # print blue11
+        # blue_bytes, ba = self.slice_bytearray(ba, 8)
+        # blue12 = self.byte_to_double(blue_bytes)
+        # print blue12
 
 
+        print len(ba)
+
+        return {
+            'file_length': file_length,
+            'version': version,
+            'url_path_length': img_path_len_int,
+            'url_path': url_path,
+            'tag_list_length':tag_len_int,
+            'tag_list': tags,
+            'normalised_param_length': norm_param_len_int,
+            'normalised_params': norm_params,
+            'params_length': param_len_int,
+            'params': params,
+            'colours': count_colours_int,
+            'red': red,
+            'green': green,
+            'blue': blue,
+            'remains_length': len(remains),
+            'remains': remains
+        }
 
 blyreader = BLYreader('./data')
 
