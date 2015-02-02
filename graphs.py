@@ -1,5 +1,7 @@
 import math
+import os
 import pprint
+import requests
 
 __author__ = 'ubuntu'
 #
@@ -153,6 +155,7 @@ def graph_matches(sorted_weights):
     # plt.axis([0, len(name_list), 0, len(name_list)])
     plt.show()
 
+
 def create_graph(matches):
 
     nodes = set()
@@ -209,5 +212,46 @@ def create_graph(matches):
 
     # edge = G.get_edge("C", "E")
     # print(edge.attr)
+
+    G.draw('somefilename.png', format='png', prog='neato')
+
+
+
+def create_img_graph(dists):
+    import pygraphviz as PG
+
+    G = PG.AGraph(splines=True)
+    G.node_attr.update(color="red", style="filled")
+    G.edge_attr.update(color="blue", len="2.0", width="2.0")
+
+    print(G.edge_attr)
+
+    for dist in dists:
+        if not os.path.isfile('./img/' + dist['a'] + '.jpg'):
+            r1 = requests.get(dist['a-url'], stream=True)
+            with open('./img/' + dist['a'] + '.jpg', 'wb') as fd1:
+                for chunk in r1.iter_content(1024):
+                    fd1.write(chunk)
+
+        if not os.path.isfile('./img/' + dist['b'] + '.jpg'):
+            r2 = requests.get(dist['b-url'], stream=True)
+            with open('./img/' + dist['b'] + '.jpg', 'wb') as fd2:
+                for chunk in r2.iter_content(1024):
+                    fd2.write(chunk)
+
+        G.add_node(dist['a'], label=dist['a'], image='./img/' + dist['a'] + '.jpg')
+        G.add_node(dist['b'], label=dist['b'], image='./img/' + dist['b'] + '.jpg')
+        G.add_edge(dist['a'], dist['b'], len=dist['dist'] * 10, color="blue", width="15.0")
+
+        for close in dist['close']:
+            if not os.path.isfile('./img/' + close['b'] + '.jpg'):
+                r3 = requests.get(close['b-url'], stream=True)
+                with open('./img/' + close['b'] + '.jpg', 'wb') as fd3:
+                    for chunk in r3.iter_content(1024):
+                        fd3.write(chunk)
+
+            # G.add_node(dist['a'], label=dist['a'], image='/home/lostvisions/PycharmProjects/lost_visions_machine_learning/learn-all/coatofarms/11077907804_a2b15ef628_o.jpg')
+            G.add_node(close['b'], label=close['b'], image='./img/' + close['b'] + '.jpg')
+            G.add_edge(dist['a'], close['b'], len=close['dist'] * 10, color="blue", width="15.0")
 
     G.draw('somefilename.png', format='png', prog='neato')
