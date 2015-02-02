@@ -116,58 +116,17 @@ class BLYreader():
         count_colours_int = self.byte_to_uint(count_colours)
 
         #  RGB
-        red_bytes, ba = self.slice_bytearray(ba, 8)
-        red = self.byte_to_double(red_bytes)
+        colours = []
+        for colour in range(0, count_colours_int):
+            red_bytes, ba = self.slice_bytearray(ba, 8)
+            red = self.byte_to_double(red_bytes)
 
-        green_bytes, ba = self.slice_bytearray(ba, 8)
-        green = self.byte_to_double(green_bytes)
+            green_bytes, ba = self.slice_bytearray(ba, 8)
+            green = self.byte_to_double(green_bytes)
 
-        blue_bytes, ba = self.slice_bytearray(ba, 8)
-        blue = self.byte_to_double(blue_bytes)
-
-        # Not sure what data is stored in here
-        # Appears to be 96 bytes
-        remains = ba
-
-        # blue_bytes, ba = self.slice_bytearray(ba, 8)
-        # blue1 = self.byte_to_double(blue_bytes)
-        # print blue1
-        # blue_bytes, ba = self.slice_bytearray(ba, 8)
-        # blue2 = self.byte_to_double(blue_bytes)
-        # print blue2
-        # blue_bytes, ba = self.slice_bytearray(ba, 8)
-        # blue3 = self.byte_to_double(blue_bytes)
-        # print blue3
-        # blue_bytes, ba = self.slice_bytearray(ba, 8)
-        # blue4 = self.byte_to_double(blue_bytes)
-        # print blue4
-        # blue_bytes, ba = self.slice_bytearray(ba, 8)
-        # blue5 = self.byte_to_double(blue_bytes)
-        # print blue5
-        # blue_bytes, ba = self.slice_bytearray(ba, 8)
-        # blue6 = self.byte_to_double(blue_bytes)
-        # print blue6
-        # blue_bytes, ba = self.slice_bytearray(ba, 8)
-        # blue7 = self.byte_to_double(blue_bytes)
-        # print blue7
-        # blue_bytes, ba = self.slice_bytearray(ba, 8)
-        # blue8 = self.byte_to_double(blue_bytes)
-        # print blue8
-        # blue_bytes, ba = self.slice_bytearray(ba, 8)
-        # blue9 = self.byte_to_double(blue_bytes)
-        # print blue9
-        # blue_bytes, ba = self.slice_bytearray(ba, 8)
-        # blue10 = self.byte_to_double(blue_bytes)
-        # print blue10
-        # blue_bytes, ba = self.slice_bytearray(ba, 8)
-        # blue11 = self.byte_to_double(blue_bytes)
-        # print blue11
-        # blue_bytes, ba = self.slice_bytearray(ba, 8)
-        # blue12 = self.byte_to_double(blue_bytes)
-        # print blue12
-
-
-        print len(ba)
+            blue_bytes, ba = self.slice_bytearray(ba, 8)
+            blue = self.byte_to_double(blue_bytes)
+            colours.append([red, green, blue])
 
         return {
             'file_length': file_length,
@@ -180,12 +139,8 @@ class BLYreader():
             'normalised_params': norm_params,
             'params_length': param_len_int,
             'params': params,
-            'colours': count_colours_int,
-            'red': red,
-            'green': green,
-            'blue': blue,
-            'remains_length': len(remains),
-            'remains': remains
+            'colours_length': count_colours_int,
+            'colours': colours
         }
 
 blyreader = BLYreader('./data')
